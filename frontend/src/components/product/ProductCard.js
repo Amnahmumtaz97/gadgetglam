@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { useCart } from '../../context/CartContext';
+import { getAssistantSessionId } from '../../utils/assistantSession';
 import './ProductCard.css';
 
 function getWishlist() {
@@ -31,7 +33,17 @@ export default function ProductCard({ product }) {
 
   return (
     <article className="product-card fade-up" itemScope itemType="https://schema.org/Product">
-      <Link to={`/products/${product.slug}`} className="product-card__image-wrap">
+      <Link
+        to={`/products/${product.slug}`}
+        className="product-card__image-wrap"
+        onClick={() => {
+          axios.post('/api/assistant/event', {
+            sessionId: getAssistantSessionId(),
+            type: 'product_click',
+            productId: product._id
+          }).catch(() => {});
+        }}
+      >
         {product.thumbnail
           ? <img src={product.thumbnail} alt={product.name} itemProp="image" loading="lazy" />
           : <div className="product-card__placeholder">📱</div>

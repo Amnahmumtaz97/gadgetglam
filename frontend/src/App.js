@@ -12,9 +12,12 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
+import PaymentResultPage from './pages/PaymentResultPage';
+import OrderTrackingPage from './pages/OrderTrackingPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
+import AIChatWidget from './components/common/AIChatWidget';
 
 export default function App() {
   return (
@@ -28,6 +31,8 @@ export default function App() {
           <Route path="/category/:category"     element={<CategoryPage />} />
           <Route path="/cart"                   element={<CartPage />} />
           <Route path="/checkout"               element={<PrivateRoute><CheckoutPage /></PrivateRoute>} />
+          <Route path="/payment-result"         element={<PaymentResultPage />} />
+          <Route path="/orders"                 element={<PrivateRoute><OrderTrackingPage /></PrivateRoute>} />
           <Route path="/login"                  element={<LoginPage />} />
           <Route path="/register"               element={<RegisterPage />} />
           <Route path="/profile"                element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
@@ -36,6 +41,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <AIChatWidget />
     </>
   );
 }

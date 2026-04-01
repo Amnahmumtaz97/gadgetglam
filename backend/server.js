@@ -18,7 +18,9 @@ const limiter = rateLimit({
   max: 100,
   message: { success: false, message: 'Too many requests, please try again later.' }
 });
-app.use('/api/', limiter);
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/', limiter);
+}
 
 // ── CORS ──────────────────────────────────────────────────
 app.use(cors({
@@ -40,6 +42,7 @@ app.use('/api/orders',   require('./routes/orders'));
 app.use('/api/reviews',  require('./routes/reviews'));
 app.use('/api/users',    require('./routes/users'));
 app.use('/api/admin',    require('./routes/admin'));
+app.use('/api/assistant', require('./routes/assistant'));
 
 // ── Health Check ──────────────────────────────────────────
 app.get('/api/health', (req, res) => {

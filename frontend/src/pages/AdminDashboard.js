@@ -14,6 +14,7 @@ const BLANK_PRODUCT = {
   brand: '', category: 'Cases', stock_status: 'In Stock', is_featured: false,
   thumbnail: '', images: '', affiliate_link: '', affiliate_platform: 'Daraz',
   device_compatibility: '', tags: '',
+  seo_meta_title: '', seo_meta_description: '', seo_meta_keywords: '', seo_canonical_url: '', seo_og_image: '',
 };
 
 export default function AdminDashboard() {
@@ -79,6 +80,11 @@ export default function AdminDashboard() {
       affiliate_platform: p.affiliate_platform || 'Daraz',
       device_compatibility: (p.device_compatibility || []).join(', '),
       tags: (p.tags || []).join(', '),
+      seo_meta_title: p.seo?.meta_title || '',
+      seo_meta_description: p.seo?.meta_description || '',
+      seo_meta_keywords: (p.seo?.meta_keywords || []).join(', '),
+      seo_canonical_url: p.seo?.canonical_url || '',
+      seo_og_image: p.seo?.og_image || '',
     });
     setShowProdForm(true);
   };
@@ -87,13 +93,21 @@ export default function AdminDashboard() {
     e.preventDefault();
     setSavingProd(true);
     try {
+      const { seo_meta_title, seo_meta_description, seo_meta_keywords, seo_canonical_url, seo_og_image, ...rest } = prodForm;
       const payload = {
-        ...prodForm,
-        price: Number(prodForm.price),
-        compare_price: prodForm.compare_price ? Number(prodForm.compare_price) : undefined,
-        images: prodForm.images ? prodForm.images.split(',').map(s => s.trim()).filter(Boolean) : [],
-        device_compatibility: prodForm.device_compatibility ? prodForm.device_compatibility.split(',').map(s => s.trim()).filter(Boolean) : [],
-        tags: prodForm.tags ? prodForm.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+        ...rest,
+        price: Number(rest.price),
+        compare_price: rest.compare_price ? Number(rest.compare_price) : undefined,
+        images: rest.images ? rest.images.split(',').map(s => s.trim()).filter(Boolean) : [],
+        device_compatibility: rest.device_compatibility ? rest.device_compatibility.split(',').map(s => s.trim()).filter(Boolean) : [],
+        tags: rest.tags ? rest.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+        seo: {
+          meta_title: seo_meta_title,
+          meta_description: seo_meta_description,
+          meta_keywords: seo_meta_keywords ? seo_meta_keywords.split(',').map(s => s.trim()).filter(Boolean) : [],
+          canonical_url: seo_canonical_url,
+          og_image: seo_og_image,
+        }
       };
       if (editProduct) {
         const { data } = await axios.put(`/api/admin/products/${editProduct._id}`, payload);
@@ -316,6 +330,16 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
               <FormField label="Tags (comma-sep)" colSpan={2}><input style={inputStyle} value={prodForm.tags} onChange={f('tags')} placeholder="leather, wallet, iphone" /></FormField>
               <FormField label="Short Description" colSpan={2}><textarea style={{ ...inputStyle, height: '70px', resize: 'vertical' }} value={prodForm.short_description} onChange={f('short_description')} /></FormField>
               <FormField label="Description *" colSpan={2}><textarea style={{ ...inputStyle, height: '100px', resize: 'vertical' }} value={prodForm.description} onChange={f('description')} required /></FormField>
+              
+              {/* SEO Fields */}
+              <div style={{ gridColumn: 'span 2', borderTop: '2px solid var(--gray-200)', paddingTop: '16px', marginTop: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--gray-700)', marginBottom: '12px' }}>📊 SEO Settings</div>
+              </div>
+              <FormField label="Meta Title (70 chars)" colSpan={2}><input style={inputStyle} value={prodForm.seo_meta_title} onChange={f('seo_meta_title')} placeholder={`${prodForm.name} | GadgetGlam`} maxLength="70" /></FormField>
+              <FormField label="Meta Description (160 chars)" colSpan={2}><textarea style={{ ...inputStyle, height: '60px', resize: 'vertical' }} value={prodForm.seo_meta_description} onChange={f('seo_meta_description')} placeholder="Describe the product for search engines..." maxLength="160" /></FormField>
+              <FormField label="Meta Keywords (comma-sep)" colSpan={2}><input style={inputStyle} value={prodForm.seo_meta_keywords} onChange={f('seo_meta_keywords')} placeholder="keyword1, keyword2, keyword3" /></FormField>
+              <FormField label="Canonical URL" colSpan={2}><input style={inputStyle} value={prodForm.seo_canonical_url} onChange={f('seo_canonical_url')} placeholder="https://gadgetglam.pk/products/..." /></FormField>
+              <FormField label="OG Image URL" colSpan={2}><input style={inputStyle} value={prodForm.seo_og_image} onChange={f('seo_og_image')} placeholder="https://..." /></FormField>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', margin: '12px 0 20px', cursor: 'pointer' }}>
               <input type="checkbox" checked={prodForm.is_featured} onChange={f('is_featured')} /> Featured Product

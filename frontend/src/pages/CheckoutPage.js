@@ -5,9 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import SEOHead from '../components/common/SEOHead';
+import { getAssistantSessionId } from '../utils/assistantSession';
 
 export default function CheckoutPage() {
-  const { cart, totalPrice, clearCart } = useCart();
+  const { cart, discountedTotal } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,13 @@ export default function CheckoutPage() {
     }
     setLoading(true);
     try {
-      const { data } = await axios.post('/api/orders/initiate-jazzcash', {
+      axios.post('/api/assistant/event', {
+        sessionId: getAssistantSessionId(),
+        type: 'checkout_started'
+      }).catch(() => {});
+
+      const sandboxRef = `SBX-${Date.now()}`;
+      const { data } = await axios.post('/api/orders', {
         products: cart.map(i => ({
           product_id: i._id,
           name: i.name,
@@ -46,26 +53,18 @@ export default function CheckoutPage() {
           quantity: i.qty,
           price: i.price,
         })),
-        total_price: totalPrice,
+        total_price: discountedTotal,
+        payment_method: 'COD',
+        payment_status: 'Unpaid',
+        order_status: 'Pending',
+        jazzcash_txn_ref: sandboxRef,
+        notes: 'Sandbox checkout (no payment gateway)',
         shipping_address: { street: form.street, city: form.city, zip: form.zip, country: 'Pakistan' },
       });
       if (!data.success) throw new Error(data.message);
-      // Build and auto-submit a hidden form to JazzCash
-      const jcForm = document.createElement('form');
-      jcForm.method = 'POST';
-      jcForm.action = data.jcUrl;
-      Object.entries(data.params).forEach(([key, val]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = val;
-        jcForm.appendChild(input);
-      });
-      document.body.appendChild(jcForm);
-      clearCart();
-      jcForm.submit();
+      navigate(`/payment-result?status=success&ref=${sandboxRef}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not initiate payment. Try again.');
+      toast.error(err.response?.data?.message || 'Could not place order. Try again.');
       setLoading(false);
     }
   };
@@ -108,8 +107,8 @@ export default function CheckoutPage() {
               <div style={{ background: 'var(--purple-faint)', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '28px' }}>📱</span>
                 <div>
-                  <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--purple)' }}>Pay with JazzCash</div>
-                  <div style={{ fontSize: '12px', color: 'var(--gray-500)' }}>You will be redirected to JazzCash to complete payment securely.</div>
+                  <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--purple)' }}>Sandbox Checkout</div>
+                  <div style={{ fontSize: '12px', color: 'var(--gray-500)' }}>No external gateway. Orders are placed instantly for testing.</div>
                 </div>
               </div>
 
@@ -119,11 +118,11 @@ export default function CheckoutPage() {
                 disabled={loading}
                 style={{ width: '100%', padding: '14px', fontSize: '15px', opacity: loading ? 0.7 : 1 }}
               >
-                {loading ? 'Redirecting to JazzCash…' : `Pay PKR ${totalPrice.toLocaleString()} via JazzCash`}
+                {loading ? 'Placing sandbox order…' : `Place Sandbox Order (PKR ${discountedTotal.toLocaleString()})`}
               </button>
             </form>
             <p style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '12px', textAlign: 'center' }}>
-              🔒 Secured by JazzCash. Your payment info is never stored on our servers.
+              Sandbox mode: no real payment is processed.
             </p>
           </div>
 

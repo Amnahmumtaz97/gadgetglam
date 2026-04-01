@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import ProductCard from '../components/product/ProductCard';
+import { getAssistantSessionId } from '../utils/assistantSession';
 import './ProductDetailPage.css';
 
 export default function ProductDetailPage() {
@@ -18,6 +19,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading]   = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [qty, setQty]           = useState(1);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [savingWishlist, setSavingWishlist] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', review_text: '' });
 
   useEffect(() => {
@@ -27,6 +30,22 @@ export default function ProductDetailPage() {
       .then(res => {
         loaded = res.data.product;
         setProduct(loaded);
+
+        axios.post('/api/assistant/event', {
+          sessionId: getAssistantSessionId(),
+          type: 'product_view',
+          productId: loaded._id
+        }).catch(() => {});
+
+        // Check if product is already wishlisted
+        if (user) {
+          axios.get('/api/users/profile')
+            .then(profileRes => {
+              const wishlisted = profileRes.data.user?.wishlist?.includes(loaded._id);
+              setIsWishlisted(wishlisted || false);
+            })
+            .catch(() => {});
+        }
         return Promise.all([
           axios.get(`/api/reviews/${loaded._id}`),
           axios.get(`/api/products?category=${encodeURIComponent(loaded.category)}&limit=8`),
@@ -38,7 +57,21 @@ export default function ProductDetailPage() {
       })
       .catch(() => toast.error('Product not found'))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, user]);
+
+  const handleWishlist = async () => {
+    if (!user) return toast.error('Please login to add to wishlist');
+    setSavingWishlist(true);
+    try {
+      const res = await axios.post(`/api/users/wishlist/${product._id}`);
+      setIsWishlisted(!isWishlisted);
+      toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error updating wishlist');
+    } finally {
+      setSavingWishlist(false);
+    }
+  };
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
@@ -48,6 +81,7 @@ export default function ProductDetailPage() {
       toast.success('Review submitted!');
       const res = await axios.get(`/api/reviews/${product._id}`);
       setReviews(res.data.reviews);
+      setReviewForm({ rating: 5, title: '', review_text: '' });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error submitting review');
     }
@@ -172,6 +206,28 @@ export default function ProductDetailPage() {
                 disabled={product.stock_status === 'Out of Stock'}
               >
                 🛒 Add to Cart
+              </button>
+              <button
+                onClick={handleWishlist}
+                disabled={savingWishlist}
+                style={{
+                  background: isWishlisted ? 'var(--purple)' : '#fff',
+                  color: isWishlisted ? '#fff' : 'var(--purple)',
+                  border: '1.5px solid var(--purple)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: savingWishlist ? 'default' : 'pointer',
+                  opacity: savingWishlist ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {isWishlisted ? '❤️' : '🤍'} {isWishlisted ? 'Saved' : 'Save'}
               </button>
               <a
                 href={product.affiliate_link}

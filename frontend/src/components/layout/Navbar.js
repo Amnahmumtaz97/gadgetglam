@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { getAssistantSessionId } from '../../utils/assistantSession';
 import './Navbar.css';
 
 const CATEGORIES = ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles'];
@@ -11,14 +13,28 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
+      axios.post('/api/assistant/event', {
+        sessionId: getAssistantSessionId(),
+        type: 'search',
+        query: search.trim()
+      }).catch(() => {});
+
       navigate(`/products?search=${encodeURIComponent(search.trim())}`);
       setSearch('');
+      setMenuOpen(false);
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setProfileMenuOpen(false);
+    navigate('/');
   };
 
   return (
@@ -48,10 +64,99 @@ export default function Navbar() {
         {/* Actions */}
         <div className="navbar-actions">
           {user ? (
-            <div className="user-menu">
-              <span className="user-greeting">Hi, {user.first_name}</span>
-              {user.role === 'admin' && <Link to="/admin" className="admin-link">Admin</Link>}
-              <button className="btn-text" onClick={logout}>Logout</button>
+            <div style={{ position: 'relative' }}>
+              <button 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: 'inherit',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}
+              >
+                👤 {user.first_name}
+              </button>
+              {profileMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  background: '#fff',
+                  borderRadius: '12px',
+                  border: '1.5px solid var(--gray-200)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,.1)',
+                  minWidth: '180px',
+                  zIndex: 100,
+                  marginTop: '8px'
+                }}>
+                  <Link 
+                    to="/profile"
+                    onClick={() => setProfileMenuOpen(false)}
+                    style={{
+                      display: 'block',
+                      padding: '12px 16px',
+                      borderBottom: '1px solid var(--gray-100)',
+                      textDecoration: 'none',
+                      color: 'var(--gray-700)',
+                      fontSize: '14px'
+                    }}
+                  >
+                    👤 My Profile
+                  </Link>
+                  <Link 
+                    to="/orders"
+                    onClick={() => setProfileMenuOpen(false)}
+                    style={{
+                      display: 'block',
+                      padding: '12px 16px',
+                      borderBottom: '1px solid var(--gray-100)',
+                      textDecoration: 'none',
+                      color: 'var(--gray-700)',
+                      fontSize: '14px'
+                    }}
+                  >
+                    📦 My Orders
+                  </Link>
+                  {user.role === 'admin' && (
+                    <Link 
+                      to="/admin"
+                      onClick={() => setProfileMenuOpen(false)}
+                      style={{
+                        display: 'block',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--gray-100)',
+                        textDecoration: 'none',
+                        color: 'var(--purple)',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      📊 Admin Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--gray-700)',
+                      fontSize: '14px',
+                      borderRadius: '0 0 12px 12px'
+                    }}
+                  >
+                    🚪 Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="auth-links">

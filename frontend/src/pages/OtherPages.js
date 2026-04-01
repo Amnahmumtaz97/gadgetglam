@@ -9,24 +9,28 @@ import ProductCard from '../components/product/ProductCard';
 import toast from 'react-hot-toast';
 
 export function CartPage() {
-  const { cart, removeFromCart, updateQty, totalPrice, clearCart } = useCart();
-  const [coupon, setCoupon]           = useState('');
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [couponDiscount, setCouponDiscount] = useState(0);
+  const {
+    cart,
+    removeFromCart,
+    updateQty,
+    subtotal,
+    clearCart,
+    couponCode,
+    couponDiscount,
+    discountedTotal,
+    applyCoupon,
+    clearCoupon
+  } = useCart();
+  const [couponInput, setCouponInput] = useState(couponCode || '');
 
-  const applyCoupon = () => {
-    if (couponApplied) return;
-    if (coupon.trim().toUpperCase() === 'GLAM10') {
-      const disc = Math.round(totalPrice * 0.10);
-      setCouponDiscount(disc);
-      setCouponApplied(true);
-      toast.success('Coupon applied! 10% off 🎉');
-    } else {
-      toast.error('Invalid coupon code');
-    }
+  const couponApplied = !!couponCode;
+
+  const handleApplyCoupon = () => {
+    const ok = applyCoupon(couponInput);
+    if (ok) setCouponInput((couponInput || '').trim().toUpperCase());
   };
 
-  const finalTotal = couponApplied ? totalPrice - couponDiscount : totalPrice;
+  const finalTotal = discountedTotal;
 
   return (
     <>
@@ -66,27 +70,35 @@ export function CartPage() {
 
             <div style={{background:'#fff',borderRadius:'20px',padding:'28px',border:'1.5px solid var(--gray-200)',position:'sticky',top:'120px'}}>
               <h2 style={{fontFamily:'var(--font-display)',fontSize:'22px',marginBottom:'20px'}}>Order Summary</h2>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:'15px',marginBottom:'10px'}}><span>Subtotal</span><strong>PKR {totalPrice.toLocaleString()}</strong></div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:'15px',marginBottom:'10px'}}><span>Subtotal</span><strong>PKR {subtotal.toLocaleString()}</strong></div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:'15px',marginBottom:'14px',color:'var(--green)'}}><span>Delivery</span><strong>FREE</strong></div>
               {/* Coupon code */}
               <div style={{marginBottom:'14px'}}>
                 <div style={{display:'flex',gap:'8px',marginBottom: couponApplied ? '8px' : '0'}}>
                   <input
                     type="text" placeholder="Coupon code (try GLAM10)"
-                    value={coupon} onChange={e => setCoupon(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && applyCoupon()}
+                    value={couponInput} onChange={e => setCouponInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
                     disabled={couponApplied}
                     style={{flex:'1',border:'1.5px solid var(--gray-200)',borderRadius:'10px',padding:'9px 12px',fontSize:'13px',fontFamily:'inherit',outline:'none',opacity: couponApplied ? .6 : 1}}
                   />
                   <button
-                    onClick={applyCoupon} disabled={couponApplied}
+                    onClick={handleApplyCoupon} disabled={couponApplied}
                     style={{background: couponApplied ? 'var(--gray-100)' : 'var(--purple)',color: couponApplied ? 'var(--gray-500)' : '#fff',border:'none',borderRadius:'10px',padding:'9px 14px',fontWeight:'600',fontSize:'13px',cursor: couponApplied ? 'default' : 'pointer',whiteSpace:'nowrap'}}
                   >{couponApplied ? 'Applied ✓' : 'Apply'}</button>
                 </div>
                 {couponApplied && (
-                  <div style={{display:'flex',justifyContent:'space-between',color:'var(--green)',fontSize:'13px',fontWeight:'600'}}>
-                    <span>✅ GLAM10 — 10% off</span><strong>−PKR {couponDiscount.toLocaleString()}</strong>
-                  </div>
+                  <>
+                    <div style={{display:'flex',justifyContent:'space-between',color:'var(--green)',fontSize:'13px',fontWeight:'600'}}>
+                      <span>✅ {couponCode} — 10% off</span><strong>−PKR {couponDiscount.toLocaleString()}</strong>
+                    </div>
+                    <button
+                      onClick={clearCoupon}
+                      style={{marginTop:'8px',background:'none',border:'none',padding:0,color:'var(--gray-500)',fontSize:'12px',textDecoration:'underline',cursor:'pointer'}}
+                    >
+                      Remove coupon
+                    </button>
+                  </>
                 )}
               </div>
               <div style={{borderTop:'1px solid var(--gray-200)',paddingTop:'14px',display:'flex',justifyContent:'space-between',fontSize:'18px',fontWeight:'700'}}>
