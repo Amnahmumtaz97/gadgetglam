@@ -100,6 +100,10 @@ export default function AIChatWidget() {
         applyCoupon(data.action.code);
       }
 
+      if (data.action?.type === 'navigate' && data.action.path) {
+        navigate(data.action.path);
+      }
+
       if (/take me to checkout/i.test(content)) {
         navigate('/checkout');
       }

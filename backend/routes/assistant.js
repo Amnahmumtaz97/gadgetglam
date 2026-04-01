@@ -9,6 +9,153 @@ const router = express.Router();
 const CATEGORIES = ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles', 'Other'];
 const VALID_COUPONS = { GLAM10: { discountPercent: 10 } };
 
+function getQuickRepliesForUser(user) {
+  if (user?.role === 'admin') {
+    return [
+      'Show low-value orders',
+      'Delete order with lowest price',
+      'Where is my order?',
+      'Recommend accessories for me',
+      'What are payment methods?'
+    ];
+  }
+
+  return [
+    'Show me products under PKR 3000',
+    'Recommend accessories for me',
+    'Where is my order?',
+    'Apply coupon GLAM10',
+    'What are payment methods?'
+  ];
+}
+
+function isAdminOpsIntent(message) {
+  return /(delete order|lowest price order|show low-value orders|low value orders|admin orders|remove order)/i.test(message || '');
+}
+
+function levenshtein(a, b) {
+  const s = String(a || '').toLowerCase();
+  const t = String(b || '').toLowerCase();
+  if (!s.length) return t.length;
+  if (!t.length) return s.length;
+
+  const matrix = Array.from({ length: s.length + 1 }, () => new Array(t.length + 1).fill(0));
+  for (let i = 0; i <= s.length; i += 1) matrix[i][0] = i;
+  for (let j = 0; j <= t.length; j += 1) matrix[0][j] = j;
+
+  for (let i = 1; i <= s.length; i += 1) {
+    for (let j = 1; j <= t.length; j += 1) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return matrix[s.length][t.length];
+}
+
+function similarity(a, b) {
+  const left = String(a || '').trim().toLowerCase();
+  const right = String(b || '').trim().toLowerCase();
+  if (!left || !right) return 0;
+  if (left.includes(right) || right.includes(left)) return 0.95;
+  const dist = levenshtein(left, right);
+  const maxLen = Math.max(left.length, right.length) || 1;
+  return Math.max(0, 1 - dist / maxLen);
+}
+
+function tokenize(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter(tok => tok.length > 1);
+}
+
+function rankProductsForDiscovery(products, parsed) {
+  const qTokens = tokenize(parsed.freeText);
+
+  return (products || [])
+    .map(product => {
+      const hay = [product.name, product.brand, product.category, product.description].filter(Boolean).join(' ').toLowerCase();
+      const nameBrand = [product.name, product.brand].filter(Boolean).join(' ');
+
+      let textScore = 0;
+      if (!qTokens.length) {
+        textScore = 0.6;
+      } else {
+        const tokenScore = qTokens.reduce((sum, tok) => {
+          const direct = hay.includes(tok) ? 1 : 0;
+          const fuzzy = Math.max(
+            similarity(tok, product.name),
+            similarity(tok, product.brand),
+            similarity(tok, nameBrand)
+          );
+          return sum + Math.max(direct, fuzzy);
+        }, 0) / qTokens.length;
+        textScore = tokenScore;
+      }
+
+      const stockBoost = product.stock_status === 'In Stock' ? 1 : product.stock_status === 'Limited' ? 0.5 : 0;
+      const ratingNorm = Math.min(1, Number(product.ratings_avg || 0) / 5);
+      const viewsNorm = Math.min(1, Math.log10((Number(product.views || 0) + 1)) / 3);
+
+      const score = textScore * 0.62 + stockBoost * 0.15 + ratingNorm * 0.16 + viewsNorm * 0.07;
+      return { product, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map(x => x.product);
+}
+
+function detectIntentScores(message) {
+  const text = String(message || '').toLowerCase();
+  const normalized = text.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = normalized.split(' ').filter(Boolean);
+  const scores = {
+    faq: 0,
+    tracking: 0,
+    cart: 0,
+    recommendation: 0,
+    discovery: 0
+  };
+
+  if (/shipping|delivery|return|refund|exchange|payment|pay|jazzcash|paypal|cod|easypaisa/.test(text)) scores.faq += 0.9;
+  if (/where is my order|track|tracking|order status|status of order|my order/.test(text)) scores.tracking += 0.95;
+  if (/add to cart|add |remove|delete from cart|coupon|checkout|abandoned cart|top item/.test(text)) scores.cart += 0.9;
+  if (/recommend|recommendation|also bought|similar|trending|best for me|suggest|show trending/.test(text)) scores.recommendation += 0.92;
+  if (/show me|find|search|looking for|under|below|above|products?|cases|chargers|cables|earphones|bundles/.test(text)) scores.discovery += 0.9;
+
+  // Fuzzy rescue for typo-heavy phrases (e.g., "whre is my ordeer").
+  const phraseSimilarity = (phrase) => similarity(normalized, phrase.toLowerCase());
+  const containsNearWord = (target) => words.some(w => similarity(w, target) >= 0.72);
+
+  if (phraseSimilarity('where is my order') >= 0.64 || (containsNearWord('order') && (containsNearWord('track') || containsNearWord('where') || containsNearWord('status')))) {
+    scores.tracking = Math.max(scores.tracking, 0.93);
+  }
+
+  if (phraseSimilarity('show order details page') >= 0.62 || phraseSimilarity('open orders page') >= 0.62 || (containsNearWord('order') && containsNearWord('detail'))) {
+    scores.tracking = Math.max(scores.tracking, 0.9);
+  }
+
+  if (phraseSimilarity('recommend accessories for me') >= 0.63 || containsNearWord('recommend') || containsNearWord('trending')) {
+    scores.recommendation = Math.max(scores.recommendation, 0.88);
+  }
+
+  if (phraseSimilarity('show me products under 3000') >= 0.6 || (containsNearWord('show') && containsNearWord('product'))) {
+    scores.discovery = Math.max(scores.discovery, 0.84);
+  }
+
+  if (phraseSimilarity('apply coupon glam10') >= 0.6 || containsNearWord('coupon')) {
+    scores.cart = Math.max(scores.cart, 0.85);
+  }
+
+  return scores;
+}
+
 async function getOptionalUser(req) {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return null;
@@ -91,7 +238,7 @@ function isRecommendationIntent(message) {
 }
 
 function isTrackingIntent(message) {
-  return /(where is my order|track|tracking|order status|status of order)/i.test(message || '');
+  return /(where is my order|track|tracking|order status|status of order|order details page|show order details|open orders page)/i.test(message || '');
 }
 
 function isCartIntent(message) {
@@ -280,6 +427,78 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Message is required' });
     }
 
+    if (/^(hi|hello|hey|salam|aoa|assalam o alaikum)\b/i.test(text)) {
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        reply: 'Hi! I can help with product search, recommendations, order tracking, cart/coupons, and FAQs.',
+        quickReplies: getQuickRepliesForUser(user)
+      });
+    }
+
+    if (isAdminOpsIntent(text)) {
+      if (!user || user.role !== 'admin') {
+        return res.json({
+          success: true,
+          sessionId: resolvedSessionId,
+          reply: 'That is an admin operation. Please sign in as admin to manage orders from chat.',
+          quickReplies: ['Where is my order?', 'Show me products under PKR 3000', 'Recommend accessories for me']
+        });
+      }
+
+      if (/delete order with lowest price|delete order lowest price|lowest price order/i.test(text)) {
+        const target = await Order.findOne().sort('total_price createdAt');
+        if (!target) {
+          return res.json({ success: true, sessionId: resolvedSessionId, reply: 'No orders available to delete.' });
+        }
+
+        await Order.findByIdAndDelete(target._id);
+        return res.json({
+          success: true,
+          sessionId: resolvedSessionId,
+          reply: `Deleted order #${String(target._id).slice(-8)} with total PKR ${Number(target.total_price || 0).toLocaleString()}.`,
+          quickReplies: ['Show low-value orders', 'Open orders page', 'Recommend accessories for me']
+        });
+      }
+
+      if (/show low-value orders|low value orders/i.test(text)) {
+        const lowOrders = await Order.find().sort('total_price createdAt').limit(5).lean();
+        if (!lowOrders.length) {
+          return res.json({ success: true, sessionId: resolvedSessionId, reply: 'No orders found.' });
+        }
+
+        const summary = lowOrders
+          .map(o => `#${String(o._id).slice(-8)} - PKR ${Number(o.total_price || 0).toLocaleString()} (${o.order_status})`)
+          .join('; ');
+
+        return res.json({
+          success: true,
+          sessionId: resolvedSessionId,
+          reply: `Lowest-value orders: ${summary}`,
+          quickReplies: ['Delete order with lowest price', 'Open orders page']
+        });
+      }
+    }
+
+    const intentScores = detectIntentScores(text);
+    const orderedIntents = Object.entries(intentScores).sort((a, b) => b[1] - a[1]);
+    const best = orderedIntents[0];
+    const second = orderedIntents[1];
+    const isLowConfidence = best[1] < 0.65;
+    const isAmbiguous = best[1] > 0 && second[1] > 0 && (best[1] - second[1]) < 0.12;
+
+    if (isLowConfidence || isAmbiguous) {
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        reply: 'I can do that. Do you want product search, recommendations, order tracking, cart help, or FAQs?',
+        confidence: { topIntent: best[0], topScore: Number(best[1].toFixed(2)) },
+        quickReplies: getQuickRepliesForUser(user)
+      });
+    }
+
+    const confidentIntent = best[1] >= 0.78 ? best[0] : null;
+
     const faq = faqIntent(text);
     if (faq) {
       const faqReplies = {
@@ -295,7 +514,16 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    if (isTrackingIntent(text)) {
+    if (isTrackingIntent(text) || confidentIntent === 'tracking') {
+      if (/order details page|show order details|open orders page/i.test(text)) {
+        return res.json({
+          success: true,
+          sessionId: resolvedSessionId,
+          reply: 'Opening your order details page.',
+          action: { type: 'navigate', path: '/orders' }
+        });
+      }
+
       if (!user) {
         return res.json({
           success: true,
@@ -337,7 +565,7 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    if (isCartIntent(text)) {
+    if (isCartIntent(text) || confidentIntent === 'cart') {
       const lower = text.toLowerCase();
 
       if (/apply coupon|coupon/.test(lower)) {
@@ -406,13 +634,20 @@ router.post('/chat', async (req, res) => {
           .replace(/add|to cart|please|item/gi, '')
           .trim();
 
-        const product = await Product.findOne({
-          is_active: true,
-          $or: [
-            { name: new RegExp(productQuery, 'i') },
-            { brand: new RegExp(productQuery, 'i') }
-          ]
-        }).sort('-ratings_avg -views');
+        const candidates = await Product.find({ is_active: true }).limit(120).lean();
+        const ranked = candidates
+          .map(p => {
+            const score = Math.max(
+              similarity(productQuery, p.name),
+              similarity(productQuery, p.brand),
+              similarity(productQuery, `${p.brand || ''} ${p.name}`)
+            );
+            const stockBoost = p.stock_status === 'In Stock' ? 0.08 : 0;
+            return { p, score: score + stockBoost };
+          })
+          .sort((a, b) => b.score - a.score);
+
+        const product = ranked[0]?.score >= 0.45 ? ranked[0].p : null;
 
         if (!product) {
           return res.json({
@@ -431,7 +666,7 @@ router.post('/chat', async (req, res) => {
       }
     }
 
-    if (isRecommendationIntent(text)) {
+    if (isRecommendationIntent(text) || confidentIntent === 'recommendation') {
       const recs = await getRecommendations({ user, sessionId: resolvedSessionId, cart });
       const products = [
         ...recs.alsoBought,
@@ -461,7 +696,7 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    if (isDiscoveryIntent(text)) {
+    if (isDiscoveryIntent(text) || confidentIntent === 'discovery') {
       const parsed = parseDiscoveryQuery(text);
       const query = { is_active: true };
 
@@ -481,10 +716,12 @@ router.post('/chat', async (req, res) => {
         ];
       }
 
-      let products = await Product.find(query).sort('-ratings_avg -views').limit(10).lean();
+      let products = await Product.find(query).limit(80).lean();
+      products = rankProductsForDiscovery(products, parsed).slice(0, 10);
       if (!products.length && query.$or) {
         delete query.$or;
-        products = await Product.find(query).sort('-ratings_avg -views').limit(10).lean();
+        products = await Product.find(query).limit(80).lean();
+        products = rankProductsForDiscovery(products, parsed).slice(0, 10);
       }
       if (parsed.minRating) {
         products = products.filter(p => (p.ratings_avg || 0) >= parsed.minRating);
@@ -492,15 +729,21 @@ router.post('/chat', async (req, res) => {
 
       const reply = products.length
         ? `I found ${products.length} products${parsed.maxPrice ? ` under ${parsed.maxPrice}` : ''}.`
-        : 'No matching products found. Try widening your filters or removing a brand/category constraint.';
+        : 'No matching products found. Do you want me to broaden by category, brand, or price?';
 
       return res.json({
         success: true,
         sessionId: resolvedSessionId,
         reply,
         products,
+        confidence: {
+          topIntent: best[0],
+          topScore: Number(best[1].toFixed(2))
+        },
         searchFilters: parsed,
-        quickReplies: ['Show trending products', 'Recommend accessories for me', 'Apply coupon GLAM10']
+        quickReplies: products.length
+          ? ['Show trending products', 'Recommend accessories for me', 'Apply coupon GLAM10']
+          : ['Show trending products', 'Show me cases under PKR 5000', 'Recommend accessories for me']
       });
     }
 
@@ -519,7 +762,7 @@ router.post('/chat', async (req, res) => {
       success: true,
       sessionId: resolvedSessionId,
       reply: 'I can help with product search, recommendations, order tracking, cart updates, coupons, and FAQs. Try: “show me chargers under 3000”.',
-      quickReplies: ['Show me products under PKR 3000', 'Where is my order?', 'What are payment methods?']
+      quickReplies: getQuickRepliesForUser(user)
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

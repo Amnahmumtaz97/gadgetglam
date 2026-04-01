@@ -140,7 +140,7 @@ export default function CheckoutPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '700' }}>
               <span>Total</span>
-              <span style={{ color: 'var(--purple)', fontFamily: 'var(--font-display)' }}>PKR {totalPrice.toLocaleString()}</span>
+              <span style={{ color: 'var(--purple)', fontFamily: 'var(--font-display)' }}>PKR {discountedTotal.toLocaleString()}</span>
             </div>
           </div>
 
