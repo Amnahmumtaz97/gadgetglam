@@ -45,6 +45,31 @@
   font-size: 18px;
 }
 
+.ai-agent-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--gray-200);
+  background: #fff;
+}
+
+.ai-agent-panel button {
+  border: 1px solid rgba(108, 68, 255, 0.16);
+  background: linear-gradient(180deg, #ffffff, #f7f4ff);
+  color: var(--gray-700);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-agent-panel button:hover {
+  background: rgba(108, 68, 255, 0.08);
+  color: var(--purple);
+}
+
 .ai-chat-body {
   flex: 1;
   overflow-y: auto;

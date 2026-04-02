@@ -4,7 +4,71 @@ const Product  = require('../models/Product');
 const User     = require('../models/User');
 const { Order, Review } = require('../models/OrderReview');
 
-// ── PRODUCTS ──────────────────────────────────────────────────────────────────
+// ── PRODUCT GENERATION FUNCTION ────────────────────────────────────────────────
+function generateProducts(count = 100) {
+  const categories = ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles'];
+  const brands = ['LuxeCase', 'PowerPro', 'TechLink', 'SoundPro', 'GlassGuard', 'GadgetGlam', 'ClearShield', 'ArmorMax', 'MatteMax', 'RingCase'];
+  const devices = ['iPhone 15', 'iPhone 14', 'Samsung Galaxy S24', 'Samsung Galaxy A54', 'Universal'];
+  const imageUrls = [
+    'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&q=80',
+    'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400&q=80',
+    'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=400&q=80',
+    'https://images.unsplash.com/photo-1512054502232-10a0a035d672?w=400&q=80',
+    'https://images.unsplash.com/photo-1609096458733-95b38583ac4e?w=400&q=80',
+    'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
+  ];
+  
+  const products = [];
+  for (let i = 0; i < count; i++) {
+    const category = categories[i % categories.length];
+    const price = Math.floor(Math.random() * 7000) + 500;
+    const compare_price = Math.floor(price * (1 + Math.random() * 0.5));
+    
+    products.push({
+      name: `${category} Item #${i + 1} - Premium ${brands[i % brands.length]} Product`,
+      description: `Premium quality ${category.toLowerCase()} with excellent durability and performance. Perfect for your ${devices[i % devices.length]} device. Features advanced protection and sleek design. Highly recommended by customers.`,
+      short_description: `Premium ${category.toLowerCase()} product #${i + 1}`,
+      price,
+      compare_price,
+      brand: brands[i % brands.length],
+      category,
+      device_compatibility: [devices[i % devices.length]],
+      tags: [category.toLowerCase(), 'premium', 'quality', `item-${i + 1}`],
+      thumbnail: imageUrls[i % imageUrls.length],
+      images: [imageUrls[i % imageUrls.length]],
+      affiliate_link: 'https://www.daraz.pk',
+      affiliate_platform: 'Daraz',
+      ratings_avg: Math.min(5, Math.random() * 1.2 + 3.8),
+      reviews_count: Math.floor(Math.random() * 300) + 20,
+      is_featured: Math.random() > 0.7,
+      stock_status: 'In Stock',
+    });
+  }
+  return products;
+}
+
+// ── USER GENERATION FUNCTION ──────────────────────────────────────────────────
+function generateUsers(count = 100) {
+  const firstNames = ['Ahmed', 'Fatima', 'Muhammad', 'Aisha', 'Hassan', 'Zainab', 'Ibrahim', 'Noor', 'Bilal', 'Layla', 'Usman', 'Hana'];
+  const lastNames = ['Khan', 'Ahmed', 'Ali', 'Malik', 'Shah', 'Raza', 'Hassan', 'Hussain', 'Baig', 'Iqbal', 'Sheikh', 'Qureshi'];
+  
+  const users = [
+    { first_name: 'Admin', last_name: 'GadgetGlam', email: 'admin@gadgetglam.pk', password: 'admin123', role: 'admin' }
+  ];
+  
+  for (let i = 0; i < count; i++) {
+    users.push({
+      first_name: firstNames[Math.floor(Math.random() * firstNames.length)],
+      last_name: lastNames[Math.floor(Math.random() * lastNames.length)],
+      email: `user${i + 1}@example.com`,
+      password: 'user1234',
+      role: 'user'
+    });
+  }
+  return users;
+}
+
+// ── PRODUCTS (Old static array kept for reference) ────────────────────────────────────────────────────────────────────
 const products = [
 
   // ── Cases (10) ─────────────────────────────────────────
@@ -501,19 +565,8 @@ const products = [
   },
 ];
 
-// ── USERS ──────────────────────────────────────────────────────────────────
-const users = [
-  { first_name: 'Admin',   last_name: 'GadgetGlam', email: 'admin@gadgetglam.pk', password: 'admin123',  role: 'admin' },
-  { first_name: 'Amnah',   last_name: 'Khan',        email: 'amnah@example.com',   password: 'user1234',  role: 'user' },
-  { first_name: 'Bilal',   last_name: 'Ahmed',       email: 'bilal@example.com',   password: 'user1234',  role: 'user' },
-  { first_name: 'Sana',    last_name: 'Malik',       email: 'sana@example.com',    password: 'user1234',  role: 'user' },
-  { first_name: 'Usman',   last_name: 'Raza',        email: 'usman@example.com',   password: 'user1234',  role: 'user' },
-  { first_name: 'Hira',    last_name: 'Baig',        email: 'hira@example.com',    password: 'user1234',  role: 'user' },
-  { first_name: 'Kamran',  last_name: 'Sheikh',      email: 'kamran@example.com',  password: 'user1234',  role: 'user' },
-  { first_name: 'Zara',    last_name: 'Hussain',     email: 'zara@example.com',    password: 'user1234',  role: 'user' },
-  { first_name: 'Faisal',  last_name: 'Qureshi',     email: 'faisal@example.com',  password: 'user1234',  role: 'user' },
-  { first_name: 'Nadia',   last_name: 'Iqbal',       email: 'nadia@example.com',   password: 'user1234',  role: 'user' },
-];
+// ── USERS (will be generated) ──────────────────────────────────────────────────
+// Using generator function below
 
 // ── SEED FUNCTION ──────────────────────────────────────────────────────────
 async function seed() {
@@ -527,124 +580,119 @@ async function seed() {
     await Review.deleteMany({});
     console.log('🗑️  Cleared existing data');
 
-    // Insert products (pre-save slug hook runs per save)
+    // Generate and insert 100 products
+    console.log('📦 Generating 100 products...');
+    const generatedProducts = generateProducts(100);
     const savedProducts = [];
-    for (const p of products) {
+    for (const p of generatedProducts) {
       const saved = await new Product(p).save();
       savedProducts.push(saved);
     }
-    console.log(`📦 Inserted ${savedProducts.length} products`);
+    console.log(`✅ Inserted ${savedProducts.length} products`);
 
-    // Insert users (pre-save password hash hook runs)
+    // Generate and insert 100 users
+    console.log('👤 Generating 100 users...');
+    const generatedUsers = generateUsers(100);
     const savedUsers = [];
-    for (const u of users) {
+    for (const u of generatedUsers) {
       const saved = await new User(u).save();
       savedUsers.push(saved);
     }
-    console.log(`👤 Inserted ${savedUsers.length} users`);
+    console.log(`✅ Inserted ${savedUsers.length} users (1 admin + ${savedUsers.length - 1} customers)`);
 
     const normalUsers = savedUsers.slice(1); // exclude admin
 
-    // ── ORDERS ────────────────────────────────────────────────────────────
-    const orderTemplates = [
-      { ui: 0, pi: [0, 10],     qty: [1,1], method:'COD',       pstat:'Unpaid',  ostat:'Pending',    addr:{ street:'12 Gulshan Block 4',       city:'Karachi',   zip:'75300' } },
-      { ui: 1, pi: [4, 18],     qty: [1,2], method:'JazzCash',  pstat:'Paid',    ostat:'Delivered',  addr:{ street:'5 DHA Phase 2',             city:'Lahore',    zip:'54000' }, track:'TCS-2024-00112' },
-      { ui: 2, pi: [14],        qty: [1],   method:'COD',       pstat:'Unpaid',  ostat:'Processing', addr:{ street:'G-9/2 Street 45',           city:'Islamabad', zip:'44000' } },
-      { ui: 3, pi: [6, 22],     qty: [1,1], method:'EasyPaisa', pstat:'Paid',    ostat:'Shipped',    addr:{ street:'Clifton Block 8',           city:'Karachi',   zip:'75600' }, track:'MNP-2024-00887' },
-      { ui: 4, pi: [36],        qty: [1],   method:'COD',       pstat:'Unpaid',  ostat:'Pending',    addr:{ street:'Model Town Link Road',      city:'Lahore',    zip:'54700' } },
-      { ui: 5, pi: [10,16,20],  qty: [1,1,1],method:'JazzCash', pstat:'Paid',    ostat:'Delivered',  addr:{ street:'F-7 Markaz',               city:'Islamabad', zip:'44000' }, track:'TCS-2024-00456' },
-      { ui: 6, pi: [2, 8],      qty: [1,1], method:'COD',       pstat:'Unpaid',  ostat:'Processing', addr:{ street:'Johar Town Phase 2',        city:'Lahore',    zip:'54782' } },
-      { ui: 7, pi: [37],        qty: [1],   method:'EasyPaisa', pstat:'Paid',    ostat:'Delivered',  addr:{ street:'Cantt Area Road 3',         city:'Rawalpindi',zip:'46000' }, track:'LCS-2024-00234' },
-      { ui: 0, pi: [12, 26],    qty: [2,1], method:'COD',       pstat:'Unpaid',  ostat:'Cancelled',  addr:{ street:'PECHS Block 2',             city:'Karachi',   zip:'75400' } },
-      { ui: 1, pi: [33, 29],    qty: [1,1], method:'JazzCash',  pstat:'Paid',    ostat:'Shipped',    addr:{ street:'Bahria Town Phase 4',       city:'Rawalpindi',zip:'46220' }, track:'TCS-2024-00981' },
-      { ui: 2, pi: [23, 6],     qty: [1,1], method:'COD',       pstat:'Unpaid',  ostat:'Delivered',  addr:{ street:'Blue Area Plot 12',         city:'Islamabad', zip:'44000' } },
-      { ui: 3, pi: [0,19,31],   qty: [1,1,1],method:'EasyPaisa',pstat:'Paid',    ostat:'Delivered',  addr:{ street:'North Nazimabad Block H',   city:'Karachi',   zip:'74700' }, track:'MNP-2024-01234' },
-      { ui: 4, pi: [17],        qty: [3],   method:'COD',       pstat:'Unpaid',  ostat:'Pending',    addr:{ street:'Shadman Colony',            city:'Lahore',    zip:'54000' } },
-      { ui: 5, pi: [36, 38],    qty: [1,1], method:'JazzCash',  pstat:'Paid',    ostat:'Processing', addr:{ street:'E-11 Sector 3',             city:'Islamabad', zip:'44000' } },
-      { ui: 6, pi: [38],        qty: [1],   method:'COD',       pstat:'Unpaid',  ostat:'Delivered',  addr:{ street:'Gulberg III',               city:'Lahore',    zip:'54660' } },
-    ];
-
+    // ── GENERATE 100 ORDERS ───────────────────────────────────────────────────
+    console.log('🛒 Generating 100 orders...');
+    const paymentMethods = ['COD', 'JazzCash', 'EasyPaisa'];
+    const paymentStatuses = ['Paid', 'Unpaid'];
+    const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+    const cities = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Hyderabad', 'Peshawar'];
+    const streets = ['Main Street', 'Market Road', 'DHA Phase', 'Gulshan Block', 'Model Town', 'Clifton', 'F-Block', 'Johar Town'];
+    
     const savedOrders = [];
-    for (const t of orderTemplates) {
-      const orderProducts = t.pi.map((pidx, i) => {
-        const p = savedProducts[Math.min(pidx, savedProducts.length - 1)];
-        return { product_id: p._id, name: p.name, thumbnail: p.thumbnail, quantity: t.qty[i] || 1, price: p.price, affiliate_link: p.affiliate_link };
-      });
-      const total = orderProducts.reduce((s, p) => s + p.price * p.quantity, 0);
+    for (let i = 0; i < 100; i++) {
+      const numProducts = Math.floor(Math.random() * 3) + 1;
+      const orderProducts = [];
+      let totalPrice = 0;
+
+      for (let j = 0; j < numProducts; j++) {
+        const p = savedProducts[Math.floor(Math.random() * savedProducts.length)];
+        const qty = Math.floor(Math.random() * 3) + 1;
+        const price = p.price;
+        orderProducts.push({
+          product_id: p._id,
+          name: p.name,
+          thumbnail: p.thumbnail,
+          quantity: qty,
+          price: price,
+          affiliate_link: p.affiliate_link,
+        });
+        totalPrice += price * qty;
+      }
+
       const order = await new Order({
-        user_id:          normalUsers[t.ui % normalUsers.length]._id,
-        products:         orderProducts,
-        total_price:      total,
-        payment_method:   t.method,
-        payment_status:   t.pstat,
-        order_status:     t.ostat,
-        tracking_number:  t.track,
-        shipping_address: { ...t.addr, country: 'Pakistan' },
+        user_id: normalUsers[Math.floor(Math.random() * normalUsers.length)]._id,
+        products: orderProducts,
+        total_price: totalPrice,
+        payment_method: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
+        payment_status: paymentStatuses[Math.floor(Math.random() * paymentStatuses.length)],
+        order_status: orderStatuses[Math.floor(Math.random() * orderStatuses.length)],
+        tracking_number: `TCS-${Date.now()}-${i}`,
+        shipping_address: {
+          street: `${Math.floor(Math.random() * 100)} ${streets[Math.floor(Math.random() * streets.length)]}`,
+          city: cities[Math.floor(Math.random() * cities.length)],
+          zip: String(Math.floor(Math.random() * 90000) + 10000),
+          country: 'Pakistan',
+        },
       }).save();
       savedOrders.push(order);
     }
-    console.log(`🛒 Inserted ${savedOrders.length} orders`);
+    console.log(`✅ Inserted ${savedOrders.length} orders`);
 
-    // ── REVIEWS ───────────────────────────────────────────────────────────
-    const reviewTemplates = [
-      { pi:0,  ui:0, r:5, title:'Absolutely love it!',           text:'This leather case feels premium and my iPhone 15 Pro looks stunning in it. The card slots are super handy. Worth every rupee!' },
-      { pi:0,  ui:1, r:4, title:'Great quality',                 text:'Very nice leather feel and the magnetic closure is satisfying. Slight discoloration on the edges after a month but still looks good.' },
-      { pi:1,  ui:2, r:5, title:'Crystal clear!',                text:'You can barely notice it is even on the phone. Fits perfectly and the corners are solid. No yellowing after 2 months.' },
-      { pi:1,  ui:3, r:4, title:'Good value',                    text:'Solid protection and very clear. It did slip off once but the case did its job. Would recommend for the price.' },
-      { pi:2,  ui:4, r:5, title:'Beast protection',              text:'Dropped my phone three times and not a single scratch. The dual-layer design is bulkier but worth it. MagSafe works perfectly too.' },
-      { pi:3,  ui:5, r:4, title:'So cute!',                      text:'Bought this for my daughter and she absolutely loves the glitter. The liquid moves when you tilt it. Looks adorable!' },
-      { pi:4,  ui:6, r:5, title:'Sleek matte finish',            text:'Love the matte texture — no fingerprints at all! Very slim and does not add bulk. Exactly what I was looking for.' },
-      { pi:5,  ui:7, r:3, title:'Decent but leather peeling',    text:'After 3 months the outer leather started to peel at the corners. Card slots work fine though. Expected better quality.' },
-      { pi:6,  ui:8, r:5, title:'Ring stand is a game changer',  text:'I use the ring stand to watch Netflix at night and it is perfect. Works with my car mount too. Very sturdy.' },
-      { pi:7,  ui:0, r:5, title:'Perfect MagSafe case',          text:'Snaps onto my MagSafe charger instantly every time. Crystal clear and tough. Best case I have bought for my 15 Pro Max.' },
-      { pi:8,  ui:1, r:4, title:'Heavy duty and reliable',       text:'This case is thick but gives incredible peace of mind. Dropped it from a table and the phone was fine. Built like a tank.' },
-      { pi:9,  ui:2, r:4, title:'Nice and thin',                 text:'Very slim and the card slot fits two cards easily. Polycarbonate feels premium. A bit slippery without a grip though.' },
-      { pi:10, ui:3, r:5, title:'GaN charger is magic',          text:'Charges my laptop, phone, and earbuds all at once! Such a small brick for so much power. Travelling with just this now.' },
-      { pi:10, ui:4, r:5, title:'Best charger ever',             text:'Replaced three separate chargers with this one GaN charger. Charges everything fast and stays cool. 100% recommend.' },
-      { pi:11, ui:5, r:4, title:'iPhone charges super fast',     text:'My iPhone 15 goes from 20% to 100% in about 45 minutes. Very compact adapter. Happy with the purchase.' },
-      { pi:12, ui:6, r:5, title:'MagSafe heaven',                text:'Aligns perfectly with my iPhone every time. No more misalignment issues like with generic chargers. Love the braided cable included.' },
-      { pi:13, ui:7, r:5, title:'Samsung charges blazing fast',  text:'My S24 Ultra charges noticeably faster with this than the stock charger. Well worth the upgrade.' },
-      { pi:14, ui:8, r:4, title:'Solid power bank',              text:'The LED display is very accurate. Charges my phone twice easily. Fits in my jeans pocket which is a bonus.' },
-      { pi:15, ui:0, r:5, title:'Best bedside station',          text:'Charges my iPhone, Apple Watch, and AirPods every night. The night light mode is a nice touch. No cable mess anymore!' },
-      { pi:16, ui:1, r:4, title:'Perfect travel companion',      text:'Small and light enough to keep in the car. Both ports actually deliver full speed. Great for long drives.' },
-      { pi:17, ui:2, r:4, title:'Very fast 120W',                text:'My phone went from 10% to 100% in 14 minutes. Absolutely insane speed. A bit warm but totally safe.' },
-      { pi:18, ui:3, r:5, title:'Super reliable cable',          text:'The nylon braiding feels incredibly durable. Used it every day for 4 months and it still looks new. 100W actually works.' },
-      { pi:19, ui:4, r:4, title:'Very handy 3-in-1',             text:'So convenient to carry one cable for all devices. Quality is decent for the price. The micro-USB end is a bit stiff.' },
-      { pi:20, ui:5, r:5, title:'MFi certified and fast',        text:'Finally a proper fast-charging Lightning cable. My iPad charges noticeably faster. Braiding feels premium.' },
-      { pi:22, ui:6, r:5, title:'Thunderbolt 4 is incredible',   text:'Transfer speed is mind-blowing for my external SSD. Charges my MacBook at full 240W. Premium feel all around.' },
-      { pi:23, ui:7, r:3, title:'Fun but LEDs dim over time',    text:'Loved the glow effect when I first got it but after a month the LEDs are noticeably dimmer. Charging still works fine.' },
-      { pi:24, ui:8, r:5, title:'ANC is incredible',             text:'These earbuds cancel noise so well that I cannot hear anything around me. Sound quality is rich and detailed. Best purchase this year.' },
-      { pi:24, ui:0, r:5, title:'Worth every rupee',             text:'The bass is deep without being muddy. ANC works great in the office. Battery easily lasts all day. 10/10.' },
-      { pi:25, ui:1, r:4, title:'Good wired earphones',          text:'Clear audio and the microphone picks up my voice well on calls. USB-C fits perfectly. A bit uncomfortable after 2 hours.' },
-      { pi:26, ui:2, r:4, title:'Nice bass boost',               text:'Bass hits hard and clear. Good battery life. Not as good as the ANC earbuds but at half the price it is great value.' },
-      { pi:27, ui:3, r:5, title:'Life-changing for running',     text:'I can hear traffic while running and still enjoy my music. Bone conduction is a weird sensation at first but you get used to it.' },
-      { pi:28, ui:4, r:5, title:'Gaming earbuds are legit',      text:'The low latency mode makes a huge difference in PUBG. No more hearing footsteps a second after they happen. RGB case is cool too.' },
-      { pi:29, ui:5, r:4, title:'No bubbles at all!',            text:'Used the alignment frame and it went on perfectly first try. Crystal clear and harder than other screen protectors I have used.' },
-      { pi:30, ui:6, r:4, title:'Privacy works great',           text:'People next to me on the bus cannot see my screen at all. Glass quality is good but installation was slightly tricky.' },
-      { pi:31, ui:7, r:4, title:'Great for outdoor use',         text:'No glare at all in sunlight. The matte finish feels different from glass but you get used to it. Touch response is still excellent.' },
-      { pi:34, ui:8, r:5, title:'Camera lenses look gorgeous',   text:'The titanium frame looks so premium on my iPhone 15 Pro. Lenses are perfectly clear and scratch-proof. Easy to install.' },
-      { pi:35, ui:0, r:5, title:'Perfect bundle deal',           text:'Got everything I needed for my new iPhone in one package. Quality of all items is top-notch and the savings are real. Highly recommend!' },
-      { pi:36, ui:1, r:5, title:'Samsung bundle is great value', text:'The clear case, fast charger, and cable all feel premium. Privacy guard was easy to install. Saved a lot versus buying separately.' },
-      { pi:37, ui:2, r:5, title:'Travel kit is perfect',         text:'Took this on my Dubai trip and it covered everything — laptop, phone, tablet, all charged. The carry pouch is a nice bonus.' },
-      { pi:38, ui:3, r:5, title:'Audio lover bundle is fire',    text:'The earbuds and charging pad together are an amazing combo. Dropped both devices on the pad at night, wake up fully charged. 5 stars!' },
+    // ── GENERATE 100 REVIEWS ───────────────────────────────────────────────────
+    console.log('⭐ Generating 100 reviews...');
+    const reviewTexts = [
+      'Excellent quality and fast delivery!',
+      'Very satisfied with this product.',
+      'Value for money, highly recommend.',
+      'Great product, exceeded expectations.',
+      'Amazing quality, will buy again.',
+      'Perfect for my needs.',
+      'Good product at reasonable price.',
+      'Fantastic experience overall.',
+      'Highly impressed with quality.',
+      'Best purchase I have made.',
+      'Not as expected but still good.',
+      'Average quality but decent price.',
+      'Works well for the price.',
+      'Would recommend to friends.',
+      'Great customer service.',
+      'Fast and reliable delivery.',
+      'Quality is outstanding.',
+      'Perfect match for my needs.',
+      'Absolutely worth buying.',
+      'Love it! Great quality.',
     ];
 
     let reviewCount = 0;
-    for (const t of reviewTemplates) {
-      const pidx = Math.min(t.pi, savedProducts.length - 1);
-      const uidx = Math.min(t.ui, normalUsers.length - 1);
+    for (let i = 0; i < 100; i++) {
+      const product = savedProducts[Math.floor(Math.random() * savedProducts.length)];
+      const user = normalUsers[Math.floor(Math.random() * normalUsers.length)];
+      const rating = Math.floor(Math.random() * 5) + 1;
+
       await new Review({
-        product_id:    savedProducts[pidx]._id,
-        user_id:       normalUsers[uidx]._id,
-        rating:        t.r,
-        title:         t.title,
-        review_text:   t.text,
-        is_verified:   t.r >= 4,
-        helpful_votes: Math.floor(Math.random() * 30),
+        product_id: product._id,
+        user_id: user._id,
+        rating: rating,
+        title: `Review #${i + 1}`,
+        review_text: reviewTexts[Math.floor(Math.random() * reviewTexts.length)],
+        is_verified: Math.random() > 0.3,
+        helpful_votes: Math.floor(Math.random() * 50),
       }).save();
       reviewCount++;
     }
-    console.log(`⭐ Inserted ${reviewCount} reviews`);
+    console.log(`✅ Inserted ${reviewCount} reviews`);
 
     console.log('\n✅ Seed complete!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -654,7 +702,7 @@ async function seed() {
     console.log(`⭐ Reviews  : ${reviewCount}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔐 Admin → admin@gadgetglam.pk / admin123');
-    console.log('🔐 User  → amnah@example.com   / user1234');
+    console.log('🔐 User  → user1@example.com    / user1234');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     process.exit(0);

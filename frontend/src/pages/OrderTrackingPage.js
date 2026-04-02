@@ -27,10 +27,12 @@ export default function OrderTrackingPage() {
   const statusColor = (status) => {
     const colors = {
       Pending: '#d69e2e',
-      Processing: '#7c3aed',
-      Shipped: '#3182ce',
+      Confirmed: '#7c3aed',
+      Dispatched: '#3182ce',
       Delivered: '#38a169',
-      Cancelled: '#e53e3e'
+      Cancelled: '#e53e3e',
+      Processing: '#7c3aed',
+      Shipped: '#3182ce'
     };
     return colors[status] || '#888';
   };

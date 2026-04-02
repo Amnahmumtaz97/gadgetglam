@@ -76,7 +76,7 @@ export default function PaymentResultPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
                       <span style={{ color: 'var(--gray-500)' }}>Status</span>
                       <span style={{ padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: 'rgba(56,161,105,.1)', color: '#38a169' }}>
-                        {order.order_status || 'Processing'}
+                        {order.order_status || 'Confirmed'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0' }}>

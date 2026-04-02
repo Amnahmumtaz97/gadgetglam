@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+function randomTrackingIntervalMs() {
+  const minMs = 2 * 60 * 60 * 1000;
+  const maxMs = 3 * 60 * 60 * 1000;
+  return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+}
+
 // ── ORDER ──────────────────────────────────────────────────
 const OrderSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -20,8 +26,17 @@ const OrderSchema = new mongoose.Schema({
   jazzcash_response: { type: String },
   order_status: {
     type: String,
-    enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+    enum: ['Pending', 'Confirmed', 'Dispatched', 'Delivered', 'Cancelled', 'Processing', 'Shipped'],
     default: 'Pending'
+  },
+  auto_tracking_enabled: { type: Boolean, default: true },
+  status_updated_at: {
+    type: Date,
+    default: Date.now
+  },
+  next_auto_status_at: {
+    type: Date,
+    default: () => new Date(Date.now() + randomTrackingIntervalMs())
   },
   shipping_address: { street: String, city: String, country: String, zip: String },
   tracking_number: String,

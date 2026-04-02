@@ -13,20 +13,40 @@ function getQuickRepliesForUser(user) {
   if (user?.role === 'admin') {
     return [
       'Show low-value orders',
+      'Open Help Center',
       'Delete order with lowest price',
       'Where is my order?',
       'Recommend accessories for me',
-      'What are payment methods?'
+      'What are payment methods?',
+      'Contact support'
     ];
   }
 
   return [
     'Show me products under PKR 3000',
+    'Find cases for iPhone 15',
     'Recommend accessories for me',
     'Where is my order?',
     'Apply coupon GLAM10',
-    'What are payment methods?'
+    'What are payment methods?',
+    'Open Help Center',
+    'Contact support'
   ];
+}
+
+function isSupportIntent(message) {
+  return /(help center|help|contact support|contact us|about us|faq|returns|refund|privacy|terms)/i.test(message || '');
+}
+
+function getSupportNavigation(message) {
+  const text = String(message || '').toLowerCase();
+  if (/contact support|contact us/.test(text)) return { reply: 'Opening the Contact page.', path: '/contact' };
+  if (/about us/.test(text)) return { reply: 'Opening the About page.', path: '/about' };
+  if (/faq/.test(text)) return { reply: 'Opening FAQ.', path: '/faq' };
+  if (/returns|refund/.test(text)) return { reply: 'Opening Returns & Refunds.', path: '/returns' };
+  if (/privacy/.test(text)) return { reply: 'Opening Privacy Policy.', path: '/privacy' };
+  if (/terms/.test(text)) return { reply: 'Opening Terms of Service.', path: '/terms' };
+  return { reply: 'Opening the Help Center.', path: '/help' };
 }
 
 function isAdminOpsIntent(message) {
@@ -213,11 +233,13 @@ function parseDiscoveryQuery(message) {
   if (brandMatch) brand = brandMatch[1].trim();
 
   const clean = q
-    .replace(/show me|find|search|products|product|under|below|less than|above|over|more than|with|rated|stars?|brand|from|for|me|please|pkr|rs\.?|\$/gi, ' ')
+    .replace(/show me|find|search|products|product|under|below|less than|above|over|more than|with|rated|stars?|brand|from|for|me|please|pkr|rs\.?|\$|under budget|cheap|best rated|top rated|most popular/gi, ' ')
     .replace(/\b\d+\b/g, ' ')
     .replace(new RegExp(`\\b(${CATEGORIES.map(c => c.toLowerCase().replace(' ', '\\s+')).join('|')})\\b`, 'gi'), ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+  const wantsTrending = /trending|popular|best sellers|bestselling|hot deals/.test(q);
 
   return {
     maxPrice: maxPriceMatch ? Number(maxPriceMatch[1]) : undefined,
@@ -225,6 +247,7 @@ function parseDiscoveryQuery(message) {
     minRating: ratingMatch ? Number(ratingMatch[1]) : undefined,
     category,
     brand,
+    wantsTrending,
     freeText: clean
   };
 }
@@ -254,7 +277,8 @@ function faqIntent(message) {
 }
 
 function buildOrderTimeline(order) {
-  const sequence = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+  const legacyMap = { Processing: 'Confirmed', Shipped: 'Dispatched' };
+  const sequence = ['Pending', 'Confirmed', 'Dispatched', 'Delivered'];
   if (order.order_status === 'Cancelled') {
     return [
       { label: 'Pending', completed: true, current: false },
@@ -262,7 +286,8 @@ function buildOrderTimeline(order) {
     ];
   }
 
-  const idx = sequence.indexOf(order.order_status);
+  const normalizedStatus = legacyMap[order.order_status] || order.order_status;
+  const idx = sequence.indexOf(normalizedStatus);
   return sequence.map((step, i) => ({
     label: step,
     completed: i <= idx,
@@ -431,8 +456,19 @@ router.post('/chat', async (req, res) => {
       return res.json({
         success: true,
         sessionId: resolvedSessionId,
-        reply: 'Hi! I can help with product search, recommendations, order tracking, cart/coupons, and FAQs.',
+        reply: 'Hi! I can help with product search, recommendations, order tracking, cart/coupons, FAQ answers, and support pages.',
         quickReplies: getQuickRepliesForUser(user)
+      });
+    }
+
+    if (isSupportIntent(text)) {
+      const navigation = getSupportNavigation(text);
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        reply: navigation.reply,
+        action: { type: 'navigate', path: navigation.path },
+        quickReplies: ['FAQ', 'Returns & Refunds', 'Contact support']
       });
     }
 
@@ -510,7 +546,7 @@ router.post('/chat', async (req, res) => {
         success: true,
         sessionId: resolvedSessionId,
         reply: faqReplies[faq],
-        quickReplies: ['Track my latest order', 'Show trending products', 'Apply coupon GLAM10']
+        quickReplies: ['Track my latest order', 'Show trending products', 'Open Help Center']
       });
     }
 
@@ -561,7 +597,7 @@ router.post('/chat', async (req, res) => {
           createdAt: order.createdAt,
           timeline: buildOrderTimeline(order)
         },
-        quickReplies: ['Show order details page', 'Show recommended accessories']
+        quickReplies: ['Show order details page', 'Show recommended accessories', 'Open Help Center']
       });
     }
 
@@ -692,7 +728,7 @@ router.post('/chat', async (req, res) => {
           trending: recs.trending.length,
           alsoBought: recs.alsoBought.length
         },
-        quickReplies: ['Add top item to cart', 'Track my order', 'Show products under PKR 3000']
+        quickReplies: ['Add top item to cart', 'Track my order', 'Show trending products']
       });
     }
 
@@ -708,6 +744,10 @@ router.post('/chat', async (req, res) => {
         if (parsed.maxPrice) query.price.$lte = parsed.maxPrice;
       }
 
+      if (parsed.wantsTrending) {
+        query.$or = query.$or || [];
+      }
+
       if (parsed.freeText) {
         query.$or = [
           { name: new RegExp(parsed.freeText, 'i') },
@@ -717,6 +757,9 @@ router.post('/chat', async (req, res) => {
       }
 
       let products = await Product.find(query).limit(80).lean();
+      if (parsed.wantsTrending) {
+        products = await Product.find({ is_active: true }).sort('-views -ratings_avg').limit(80).lean();
+      }
       products = rankProductsForDiscovery(products, parsed).slice(0, 10);
       if (!products.length && query.$or) {
         delete query.$or;
@@ -742,8 +785,8 @@ router.post('/chat', async (req, res) => {
         },
         searchFilters: parsed,
         quickReplies: products.length
-          ? ['Show trending products', 'Recommend accessories for me', 'Apply coupon GLAM10']
-          : ['Show trending products', 'Show me cases under PKR 5000', 'Recommend accessories for me']
+          ? ['Show trending products', 'Recommend accessories for me', 'Open Help Center']
+          : ['Show trending products', 'Show me cases under PKR 5000', 'Contact support']
       });
     }
 

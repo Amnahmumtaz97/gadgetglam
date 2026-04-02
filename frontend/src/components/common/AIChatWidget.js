@@ -56,8 +56,18 @@ export default function AIChatWidget() {
     'Show me chargers under 3000',
     'Recommend products for me',
     'Where is my order?',
-    'What are payment methods?'
+    'What are payment methods?',
+    'Open Help Center'
   ], []);
+
+  const agentActions = useMemo(() => ([
+    { label: 'Discover', text: 'Show me products under PKR 3000' },
+    { label: 'Recommend', text: 'Recommend accessories for me' },
+    { label: 'Track', text: 'Where is my order?' },
+    { label: 'Cart', text: 'Apply coupon GLAM10' },
+    { label: 'FAQ', text: 'What are payment methods?' },
+    { label: 'Support', text: 'Open Help Center' },
+  ]), []);
 
   const sendMessage = async (text) => {
     const content = String(text || '').trim();
@@ -138,9 +148,17 @@ export default function AIChatWidget() {
           <div className="ai-chat-head">
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>GadgetGlam AI Assistant</div>
-              <div style={{ fontSize: 11, opacity: 0.9 }}>Discovery • Reco • Orders • Cart • FAQ</div>
+              <div style={{ fontSize: 11, opacity: 0.9 }}>Discovery • Reco • Orders • Cart • FAQ • Support</div>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Close assistant">✕</button>
+          </div>
+
+          <div className="ai-agent-panel">
+            {agentActions.map((action) => (
+              <button key={action.label} onClick={() => sendMessage(action.text)} type="button">
+                {action.label}
+              </button>
+            ))}
           </div>
 
           <div className="ai-chat-body">

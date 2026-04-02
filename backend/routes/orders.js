@@ -4,6 +4,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { Order } = require('../models/OrderReview');
 const { protect, adminOnly } = require('../middleware/auth');
+const { randomTrackingIntervalMs } = require('../utils/orderAutoTracker');
 
 // ── JazzCash helpers ───────────────────────────────────────
 const JC_URL = process.env.JAZZCASH_ENV === 'production'
@@ -105,15 +106,23 @@ router.post('/jazzcash-callback', async (req, res) => {
     }
 
     if (data.pp_ResponseCode === '000') {
+      const now = new Date();
       await Order.findOneAndUpdate(
         { jazzcash_txn_ref: txnRef },
-        { payment_status: 'Paid', order_status: 'Processing', jazzcash_response: JSON.stringify(data) }
+        {
+          payment_status: 'Paid',
+          order_status: 'Confirmed',
+          jazzcash_response: JSON.stringify(data),
+          auto_tracking_enabled: true,
+          status_updated_at: now,
+          next_auto_status_at: new Date(now.getTime() + randomTrackingIntervalMs())
+        }
       );
       return res.redirect(`${clientUrl}/payment-result?status=success&ref=${txnRef}`);
     } else {
       await Order.findOneAndUpdate(
         { jazzcash_txn_ref: txnRef },
-        { payment_status: 'Unpaid', order_status: 'Cancelled' }
+        { payment_status: 'Unpaid', order_status: 'Cancelled', auto_tracking_enabled: false, next_auto_status_at: null }
       );
       return res.redirect(`${clientUrl}/payment-result?status=failed&code=${data.pp_ResponseCode}`);
     }
@@ -155,7 +164,19 @@ router.get('/', protect, adminOnly, async (req, res) => {
 
 router.put('/:id/status', protect, adminOnly, async (req, res) => {
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, { order_status: req.body.order_status }, { new: true });
+    const now = new Date();
+    const nextStatus = req.body.order_status;
+    const orderUpdate = { order_status: nextStatus, status_updated_at: now };
+
+    if (['Pending', 'Confirmed', 'Dispatched', 'Processing', 'Shipped'].includes(nextStatus)) {
+      orderUpdate.auto_tracking_enabled = true;
+      orderUpdate.next_auto_status_at = new Date(now.getTime() + randomTrackingIntervalMs());
+    } else {
+      orderUpdate.auto_tracking_enabled = false;
+      orderUpdate.next_auto_status_at = null;
+    }
+
+    const order = await Order.findByIdAndUpdate(req.params.id, orderUpdate, { new: true });
     res.json({ success: true, order });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });

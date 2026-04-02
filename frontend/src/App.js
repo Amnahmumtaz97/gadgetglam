@@ -14,6 +14,11 @@ import ProfilePage from './pages/ProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
 import PaymentResultPage from './pages/PaymentResultPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import FAQPage from './pages/FAQPage';
+import HelpCenterPage from './pages/HelpCenterPage';
+import HelpCategoryPage from './pages/HelpCategoryPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
@@ -33,6 +38,14 @@ export default function App() {
           <Route path="/checkout"               element={<PrivateRoute><CheckoutPage /></PrivateRoute>} />
           <Route path="/payment-result"         element={<PaymentResultPage />} />
           <Route path="/orders"                 element={<PrivateRoute><OrderTrackingPage /></PrivateRoute>} />
+          <Route path="/about"                  element={<AboutPage />} />
+          <Route path="/contact"                element={<ContactPage />} />
+          <Route path="/faq"                    element={<FAQPage />} />
+          <Route path="/help"                   element={<HelpCenterPage />} />
+          <Route path="/help/:category"         element={<HelpCategoryPage />} />
+          <Route path="/returns"                element={<HelpCategoryPage forcedCategory="returns-and-refunds" />} />
+          <Route path="/privacy"                element={<HelpCategoryPage forcedCategory="privacy" />} />
+          <Route path="/terms"                  element={<HelpCategoryPage forcedCategory="terms" />} />
           <Route path="/login"                  element={<LoginPage />} />
           <Route path="/register"               element={<RegisterPage />} />
           <Route path="/profile"                element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

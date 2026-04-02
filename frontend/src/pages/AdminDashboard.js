@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles', 'Other'];
-const ORDER_STATUSES = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+const ORDER_STATUSES = ['Pending', 'Confirmed', 'Dispatched', 'Delivered', 'Cancelled'];
 const PAYMENT_STATUSES = ['Unpaid', 'Paid', 'Refunded'];
 const AFFY_PLATFORMS = ['AliExpress', 'Daraz', 'Amazon', 'Other'];
 
@@ -574,7 +574,7 @@ function FormField({ label, children, colSpan = 1 }) {
 }
 
 function StatusBadge({ status }) {
-  const colors = { Pending: '#d69e2e', Processing: 'var(--purple)', Shipped: '#3182ce', Delivered: '#38a169', Cancelled: '#e53e3e' };
+  const colors = { Pending: '#d69e2e', Confirmed: 'var(--purple)', Dispatched: '#3182ce', Delivered: '#38a169', Cancelled: '#e53e3e', Processing: 'var(--purple)', Shipped: '#3182ce' };
   return <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: `${colors[status] || '#888'}22`, color: colors[status] || '#888' }}>{status}</span>;
 }
 
