@@ -12,6 +12,7 @@ const SEARCH_QUERIES = [
 
 const { SHOP_CATEGORIES: SEED_CATEGORIES } = require('../constants/categories');
 const SEED_ORDER_STATUSES = ['Pending', 'Confirmed', 'Dispatched', 'Delivered', 'Cancelled'];
+const COVERAGE_RANGES = [7, 30, 90, 365];
 
 function randomPastDate(daysBack = 90) {
   const end = Date.now();
@@ -153,24 +154,29 @@ async function seedHistoricalOrders({ savedProducts, normalUsers, count = 450, d
 async function seedFilterCoverageOrders({ savedProducts, normalUsers, daysBack = 365 }) {
   let created = 0;
 
+  // Ensure each category has sales across all dashboard ranges.
   for (const category of SEED_CATEGORIES) {
     const catProducts = savedProducts.filter((p) => p.category === category);
     if (!catProducts.length) continue;
 
-    for (let i = 0; i < 22; i++) {
-      const when = randomWeightedPastDate(daysBack);
+    for (let i = 0; i < COVERAGE_RANGES.length; i++) {
+      const when = randomWeightedPastDate(Math.min(daysBack, COVERAGE_RANGES[i]));
+      const orderStatus = SEED_ORDER_STATUSES[(i + category.length) % SEED_ORDER_STATUSES.length];
       await createOrder({
         normalUsers,
         products: pick(catProducts),
         when,
+        order_status: orderStatus,
+        payment_status: paymentForOrderStatus(orderStatus),
       });
       created++;
     }
   }
 
+  // Ensure every supported order status exists in the analytics time window.
   for (const orderStatus of SEED_ORDER_STATUSES) {
-    for (let i = 0; i < 14; i++) {
-      const when = randomWeightedPastDate(daysBack);
+    for (const rangeDays of COVERAGE_RANGES) {
+      const when = randomWeightedPastDate(Math.min(daysBack, rangeDays));
       await createOrder({
         normalUsers,
         products: pick(savedProducts),
@@ -228,6 +234,28 @@ async function seedHistoricalReviews({ savedProducts, normalUsers, count = 200, 
 
 async function seedUserBehaviors({ normalUsers, savedProducts, count = 120, daysBack = 90 }) {
   let created = 0;
+
+  // Guarantee that every search suggestion appears at least once.
+  for (let i = 0; i < SEARCH_QUERIES.length; i++) {
+    const user = normalUsers[i % normalUsers.length];
+    const viewedProducts = pickUniqueProducts(savedProducts, 4);
+    const viewed = viewedProducts.map((p) => p._id);
+    const clicked = viewedProducts.slice(0, 2).map((p) => p._id);
+    const recommended = pickUniqueProducts(savedProducts, 2).map((p) => p._id);
+    const behavior = await UserBehavior.create({
+      user_id: user._id,
+      session_id: `seed-search-${i}-${user._id}`,
+      viewed_products: viewed,
+      clicked_products: clicked,
+      recommended_products: recommended,
+      search_queries: [SEARCH_QUERIES[i]],
+      last_cart_activity: randomWeightedPastDate(21),
+      checkout_started_at: i % 3 === 0 ? randomWeightedPastDate(14) : undefined,
+    });
+
+    await stampDocumentTimestamps(UserBehavior, behavior._id, randomWeightedPastDate(Math.min(daysBack, 30)));
+    created++;
+  }
 
   for (let i = 0; i < count; i++) {
     const user = pick(normalUsers);
