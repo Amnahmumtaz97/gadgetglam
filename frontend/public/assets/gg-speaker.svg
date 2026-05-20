@@ -1,0 +1,22 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="700" rx="56" fill="#000000"/>
+  <circle cx="466" cy="348" r="238" fill="#2563EB" opacity=".22"/>
+  <g filter="url(#shadow)">
+    <ellipse cx="450" cy="514" rx="218" ry="46" fill="#2563EB" opacity=".28"/>
+    <circle cx="450" cy="332" r="176" fill="url(#body)" stroke="#2563EB" stroke-width="8"/>
+    <circle cx="450" cy="332" r="114" fill="#101010" stroke="#2563EB" stroke-width="12"/>
+    <circle cx="450" cy="332" r="46" fill="#2563EB"/>
+    <path d="M326 208c58-50 188-58 250 0" stroke="#60A5FA" stroke-width="18" stroke-linecap="round" opacity=".75"/>
+  </g>
+  <defs>
+    <linearGradient id="body" x1="284" y1="156" x2="620" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A2A2A"/>
+      <stop offset=".55" stop-color="#101010"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+    <filter id="shadow" x="180" y="98" width="540" height="490" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#000000" flood-opacity=".55"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#2563EB" flood-opacity=".28"/>
+    </filter>
+  </defs>
+</svg>

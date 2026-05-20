@@ -19,12 +19,32 @@ const ProductSchema = new mongoose.Schema({
 
   category: {
     type: String,
-    enum: ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles', 'Other'],
+    enum: ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles', 'Smart Watches', 'Speakers', 'Headphones', 'Power Banks', 'Other'],
     required: true,
     index: true
   },
   device_compatibility: [{ type: String }],
   tags: [{ type: String }],
+
+  /** Combo / bundle deals — items included in the pack */
+  bundle_items: [{
+    name: { type: String, required: true },
+    detail: { type: String, default: '' },
+    quantity: { type: Number, default: 1, min: 1 },
+  }],
+
+  // ── AI / Extended Fields ───────────────────
+  focus_keywords: [{ type: String }],
+  faqs: [{ question: String, answer: String }],
+  variants: [{ name: String, color: String, material: String, price: Number, sku: String }],
+  status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
+  isAIGenerated: { type: Boolean, default: false },
+  aiGeneratedAt: { type: Date },
+  ai_history: [{
+    versionAt: { type: Date, default: Date.now },
+    note: { type: String },
+    data: { type: Object }
+  }],
 
   // ── Affiliate ──────────────────────────────
   affiliate_link:     { type: String, required: true },
@@ -38,6 +58,14 @@ const ProductSchema = new mongoose.Schema({
   stock_status: { type: String, enum: ['In Stock', 'Out of Stock', 'Limited'], default: 'In Stock' },
   is_featured:  { type: Boolean, default: false, index: true },
   is_active:    { type: Boolean, default: true, index: true },
+  is_draft:     { type: Boolean, default: false, index: true },
+
+  // ── Time-limited deals (Deals of the Week panel) ──
+  is_deal: { type: Boolean, default: false, index: true },
+  deal_ends_at: { type: Date, index: true },
+  deal_stock_total: { type: Number, min: 0, default: 0 },
+  deal_stock_remaining: { type: Number, min: 0, default: 0 },
+  deal_sort_order: { type: Number, default: 0 },
 
   // ── SEO Fields ────────────────────────────
   seo: {

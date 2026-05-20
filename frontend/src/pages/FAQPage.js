@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import SEOHead from '../components/common/SEOHead';
+import { Link } from 'react-router-dom';
+import './HelpCenterPage.css';
 
 const FAQ_ITEMS = [
   {
@@ -40,41 +42,31 @@ export default function FAQPage() {
         canonical="https://www.gadgetglam.pk/faq"
       />
 
-      <div className="container" style={{ padding: '42px 0 84px' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', marginBottom: '8px' }}>Frequently Asked Questions</h1>
-        <p style={{ color: 'var(--gray-600)', marginBottom: '20px' }}>
-          Quick answers to common customer questions.
-        </p>
+      <div className="container help-shell">
+        <section className="help-hero">
+          <h1 className="help-title">Frequently Asked Questions</h1>
+          <p className="help-subtitle">
+            Quick answers for delivery, payments, returns, and account support.
+          </p>
+          <div className="help-chip-row">
+            <Link to="/help" className="help-chip" style={{ textDecoration: 'none' }}>Browse Help Center</Link>
+            <Link to="/contact" className="help-chip" style={{ textDecoration: 'none' }}>Contact Support</Link>
+          </div>
+        </section>
 
-        <div style={{ display: 'grid', gap: '12px' }}>
+        <div className="faq-grid">
           {FAQ_ITEMS.map((item, idx) => {
             const isOpen = idx === openIdx;
             return (
-              <article key={item.q} style={{ background: '#fff', border: '1.5px solid var(--gray-200)', borderRadius: '14px', overflow: 'hidden' }}>
+              <article key={item.q} className={`faq-item ${isOpen ? 'open' : ''}`}>
                 <button
                   onClick={() => setOpenIdx(isOpen ? -1 : idx)}
-                  style={{
-                    width: '100%',
-                    border: 'none',
-                    background: '#fff',
-                    padding: '16px',
-                    fontSize: '15px',
-                    fontWeight: '700',
-                    textAlign: 'left',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    cursor: 'pointer'
-                  }}
+                  className="faq-question"
                 >
                   <span>{item.q}</span>
-                  <span style={{ color: 'var(--purple)' }}>{isOpen ? '−' : '+'}</span>
+                  <span className="faq-symbol">{isOpen ? '−' : '+'}</span>
                 </button>
-                {isOpen && (
-                  <div style={{ borderTop: '1px solid var(--gray-100)', padding: '14px 16px', color: 'var(--gray-600)', lineHeight: 1.7 }}>
-                    {item.a}
-                  </div>
-                )}
+                <div className="faq-answer">{item.a}</div>
               </article>
             );
           })}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import SEOHead from '../components/common/SEOHead';
+import './HelpCenterPage.css';
 
 const HELP_CATEGORIES = [
   { slug: 'orders-and-tracking', title: 'Orders & Tracking', emoji: '📦', desc: 'Order statuses, delivery flow, and tracking details.' },
@@ -21,27 +22,29 @@ export default function HelpCenterPage() {
         canonical="https://www.gadgetglam.pk/help"
       />
 
-      <div className="container" style={{ padding: '42px 0 84px' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', marginBottom: '10px' }}>Help Center</h1>
-        <p style={{ color: 'var(--gray-600)', marginBottom: '20px' }}>Choose a category to find detailed guidance.</p>
+      <div className="container help-shell">
+        <section className="help-hero">
+          <h1 className="help-title">Help Center</h1>
+          <p className="help-subtitle">
+            Fast answers for orders, payments, refunds, and account safety. Pick a topic and get step-by-step guidance.
+          </p>
+          <div className="help-chip-row">
+            <span className="help-chip">24/7 Self-Service</span>
+            <span className="help-chip">Order Assistance</span>
+            <span className="help-chip">Payments & Refunds</span>
+          </div>
+        </section>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+        <div className="help-grid">
           {HELP_CATEGORIES.map((item) => (
             <Link
               key={item.slug}
               to={`/help/${item.slug}`}
-              style={{
-                textDecoration: 'none',
-                color: 'inherit',
-                background: '#fff',
-                border: '1.5px solid var(--gray-200)',
-                borderRadius: '14px',
-                padding: '18px'
-              }}
+              className="help-card"
             >
-              <div style={{ fontSize: '24px', marginBottom: '8px' }}>{item.emoji}</div>
-              <h2 style={{ fontSize: '18px', fontFamily: 'var(--font-display)', marginBottom: '8px' }}>{item.title}</h2>
-              <p style={{ color: 'var(--gray-600)', fontSize: '14px', lineHeight: 1.6 }}>{item.desc}</p>
+              <div className="help-emoji">{item.emoji}</div>
+              <h2 className="help-card-title">{item.title}</h2>
+              <p className="help-card-desc">{item.desc}</p>
             </Link>
           ))}
         </div>

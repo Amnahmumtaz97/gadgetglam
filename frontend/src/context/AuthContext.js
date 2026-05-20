@@ -13,7 +13,15 @@ export function AuthProvider({ children }) {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       axios.get('/api/auth/me')
-        .then(res => setUser(res.data.user))
+        .then(async (res) => {
+          setUser(res.data.user);
+          try {
+            const { syncWishlistFromServer } = await import('../lib/wishlist');
+            await syncWishlistFromServer(axios);
+          } catch {
+            // Ignore wishlist sync errors on boot.
+          }
+        })
         .catch(() => localStorage.removeItem('gg_token'))
         .finally(() => setLoading(false));
     } else {
@@ -43,8 +51,20 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUser = (nextUser) => {
+    setUser(nextUser);
+  };
+
+  const refreshUser = async () => {
+    const token = localStorage.getItem('gg_token');
+    if (!token) return null;
+    const res = await axios.get('/api/auth/me');
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

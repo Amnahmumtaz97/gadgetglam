@@ -1,18 +1,18 @@
 .product-card {
-  background: #fff; border-radius: var(--radius);
-  border: 1.5px solid var(--gray-200); overflow: hidden;
+  background: var(--white); border-radius: var(--radius);
+  border: 1.5px solid var(--border); overflow: hidden;
   transition: transform .25s, box-shadow .25s, border-color .25s;
   display: flex; flex-direction: column;
 }
 .product-card:hover {
   transform: translateY(-8px) scale(1.01);
   box-shadow: var(--shadow-lg);
-  border-color: var(--purple-light);
+  border-color: var(--accent-yellow);
 }
 
 .product-card__image-wrap {
   position: relative; display: block;
-  height: 200px; background: var(--purple-faint);
+  height: 200px; background: linear-gradient(145deg, rgba(37,99,235,0.06), rgba(37,99,235,0.03));
   overflow: hidden;
 }
 .product-card__image-wrap img {
@@ -34,7 +34,7 @@
   border-radius: 20px; color: #fff;
 }
 .badge--sale { background: var(--red); }
-.badge--hot  { background: var(--gold); }
+.badge--hot  { background: var(--accent-yellow-light); color: #041026; }
 
 .out-of-stock-overlay {
   position: absolute; inset: 0; background: rgba(0,0,0,.5);
@@ -44,7 +44,7 @@
 
 .product-card__body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
 .product-card__brand {
-  font-size: 11px; font-weight: 700; color: var(--purple);
+  font-size: 11px; font-weight: 700; color: var(--accent-yellow);
   text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px;
 }
 .product-card__name {
@@ -58,16 +58,16 @@
 
 .product-card__footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
 .product-card__price { display: flex; flex-direction: column; gap: 1px; }
-.price-current { font-family: var(--font-display); font-size: 17px; color: var(--purple); font-weight: 700; }
+.price-current { font-family: var(--font-display); font-size: 17px; color: var(--accent-yellow); font-weight: 700; }
 .price-original { font-size: 11px; color: var(--gray-500); text-decoration: line-through; }
 
 .add-cart-btn {
-  background: var(--purple-faint); color: var(--purple);
+  background: var(--accent-yellow-light); color: #041026;
   border: none; border-radius: 10px; padding: 8px 14px;
   font-size: 13px; font-weight: 600; white-space: nowrap;
   transition: all .2s;
 }
-.add-cart-btn:hover  { background: var(--purple); color: #fff; }
+.add-cart-btn:hover  { background: var(--accent-yellow); color: #fff; }
 .add-cart-btn:active { transform: scale(.93); }
 .oos-label { font-size: 12px; color: var(--gray-500); }
 

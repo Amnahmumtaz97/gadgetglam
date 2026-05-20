@@ -1,13 +1,161 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const UserBehavior = require('../models/UserBehavior');
 const { Order } = require('../models/OrderReview');
 
 const router = express.Router();
-const CATEGORIES = ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles', 'Other'];
+const { PRODUCT_CATEGORIES: CATEGORIES } = require('../constants/categories');
 const VALID_COUPONS = { GLAM10: { discountPercent: 10 } };
+const AI_PROVIDER = String(process.env.AI_PROVIDER || 'openai').toLowerCase();
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+
+let openaiClient = null;
+let geminiClient = null;
+
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
+
+function getGeminiClient() {
+  if (!process.env.GEMINI_API_KEY) return null;
+  if (!geminiClient) {
+    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  }
+  return geminiClient;
+}
+
+function resolveAIProvider() {
+  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+
+  if (AI_PROVIDER === 'gemini') {
+    if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
+    if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
+    return null;
+  }
+
+  if (AI_PROVIDER === 'openai') {
+    if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
+    if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
+    return null;
+  }
+
+  if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
+  if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
+  return null;
+}
+
+async function generateSmartReply({ message, user, cart = [], recentConversation = [], intentHint, fallbackReply }) {
+  const ai = resolveAIProvider();
+  if (!ai) return null;
+
+  try {
+    const userProfile = user
+      ? {
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'customer',
+          role: user.role || 'customer'
+        }
+      : { role: 'guest' };
+
+    const cartSummary = (cart || []).slice(0, 6).map(item => ({
+      name: item.name,
+      qty: item.qty || 1,
+      price: item.price
+    }));
+
+    const systemPrompt = [
+      'You are GadgetGlam shopping assistant for Pakistan.',
+      'Be concise, practical, and friendly.',
+      'Do not invent unavailable features or data.',
+      'If order/account access is required, ask user to sign in.',
+      'Payment methods supported: JazzCash, EasyPaisa, PayPal, COD.',
+      'When the customer writes Urdu or Roman Urdu, reply in the same language if you are confident.',
+      'Keep responses to 2-4 short sentences.'
+    ].join(' ');
+
+    const payload = {
+      intentHint: intentHint || 'general',
+      userProfile,
+      categories: CATEGORIES,
+      cartSummary,
+      recentConversation: (recentConversation || []).slice(-10),
+      message,
+      fallbackReply: fallbackReply || null
+    };
+
+    if (ai.provider === 'gemini') {
+      const client = getGeminiClient();
+      if (!client) return null;
+
+      const model = client.getGenerativeModel({
+        model: GEMINI_MODEL,
+        systemInstruction: systemPrompt
+      });
+
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: JSON.stringify(payload) }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.35,
+          maxOutputTokens: 220
+        }
+      });
+
+      const content = result?.response?.text?.();
+      if (!content) return null;
+      return String(content).trim();
+    }
+
+    const client = getOpenAIClient();
+    if (!client) return null;
+
+    const completion = await client.chat.completions.create({
+      model: OPENAI_MODEL,
+      temperature: 0.35,
+      max_tokens: 220,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: JSON.stringify(payload) }
+      ]
+    });
+
+    const content = completion?.choices?.[0]?.message?.content;
+    if (!content) return null;
+    return String(content).trim();
+  } catch {
+    return null;
+  }
+}
+
+function buildRecentConversation(history = [], latestUserMessage = '') {
+  const normalized = (history || []).filter(Boolean).slice(-10);
+  if (latestUserMessage) normalized.push(`user: ${latestUserMessage}`);
+  return normalized;
+}
+
+function appendConversationTurn(behavior, role, text) {
+  if (!behavior || !text) return;
+  if (!Array.isArray(behavior.conversation_history)) {
+    behavior.conversation_history = [];
+  }
+  behavior.conversation_history.push(`${role}: ${String(text).slice(0, 350)}`);
+  if (behavior.conversation_history.length > 40) {
+    behavior.conversation_history = behavior.conversation_history.slice(-40);
+  }
+}
 
 function getQuickRepliesForUser(user) {
   if (user?.role === 'admin') {
@@ -51,6 +199,13 @@ function getSupportNavigation(message) {
 
 function isAdminOpsIntent(message) {
   return /(delete order|lowest price order|show low-value orders|low value orders|admin orders|remove order)/i.test(message || '');
+}
+
+function isChitChatIntent(message) {
+  const text = String(message || '').trim().toLowerCase();
+  if (!text) return false;
+  if (text.length <= 3) return true;
+  return /(how are you|who are you|what can you do|thank you|thanks|ok thanks|good morning|good evening|good night|joke|tell me something nice|motivate|help me decide)/i.test(text);
 }
 
 function levenshtein(a, b) {
@@ -140,14 +295,20 @@ function detectIntentScores(message) {
     tracking: 0,
     cart: 0,
     recommendation: 0,
-    discovery: 0
+    discovery: 0,
+    discount: 0,
+    comparison: 0,
+    compatibility: 0
   };
 
   if (/shipping|delivery|return|refund|exchange|payment|pay|jazzcash|paypal|cod|easypaisa/.test(text)) scores.faq += 0.9;
   if (/where is my order|track|tracking|order status|status of order|my order/.test(text)) scores.tracking += 0.95;
   if (/add to cart|add |remove|delete from cart|coupon|checkout|abandoned cart|top item/.test(text)) scores.cart += 0.9;
   if (/recommend|recommendation|also bought|similar|trending|best for me|suggest|show trending/.test(text)) scores.recommendation += 0.92;
-  if (/show me|find|search|looking for|under|below|above|products?|cases|chargers|cables|earphones|bundles/.test(text)) scores.discovery += 0.9;
+  if (/(find|search|looking for|products?|cases|chargers|cables|earphones|bundles|screen guards|price|under|below|above)/.test(text)) scores.discovery += 0.9;
+  if (/(discount|discounts|deals?|offers?|sale|price off|\d+\s*%\s*off|on discount)/.test(text)) scores.discount += 0.95;
+  if (/(compare|comparison|versus|vs\.?|which one|which is better|better option)/.test(text)) scores.comparison += 0.95;
+  if (/(compatible|compatibility|works with|fit|fits|support|for iphone|for samsung|for galaxy|for pixel|device)/.test(text)) scores.compatibility += 0.9;
 
   // Fuzzy rescue for typo-heavy phrases (e.g., "whre is my ordeer").
   const phraseSimilarity = (phrase) => similarity(normalized, phrase.toLowerCase());
@@ -169,8 +330,20 @@ function detectIntentScores(message) {
     scores.discovery = Math.max(scores.discovery, 0.84);
   }
 
+  if (phraseSimilarity('show discounts on chargers') >= 0.6 || containsNearWord('discount') || containsNearWord('deal') || containsNearWord('sale')) {
+    scores.discount = Math.max(scores.discount, 0.9);
+  }
+
   if (phraseSimilarity('apply coupon glam10') >= 0.6 || containsNearWord('coupon')) {
     scores.cart = Math.max(scores.cart, 0.85);
+  }
+
+  if (phraseSimilarity('compare items for me') >= 0.62 || containsNearWord('compare')) {
+    scores.comparison = Math.max(scores.comparison, 0.9);
+  }
+
+  if (containsNearWord('compatible') || containsNearWord('iphone') || containsNearWord('samsung') || containsNearWord('pixel')) {
+    scores.compatibility = Math.max(scores.compatibility, 0.86);
   }
 
   return scores;
@@ -266,6 +439,235 @@ function isTrackingIntent(message) {
 
 function isCartIntent(message) {
   return /(add to cart|add |remove|delete from cart|apply coupon|coupon|checkout|abandoned cart)/i.test(message || '');
+}
+
+function isDiscountIntent(message) {
+  return /(discount|discounts|deals?|offers?|sale|price off|\d+\s*%\s*off|off on|on discount)/i.test(message || '');
+}
+
+function isComparisonIntent(message) {
+  return /(compare|comparison|versus|vs\.?|which one|which is better|better option)/i.test(message || '');
+}
+
+function isCompatibilityIntent(message) {
+  return /(compatible|compatibility|works with|fit|fits|support|for iphone|for samsung|for galaxy|for pixel|device)/i.test(message || '');
+}
+
+function extractDeviceQuery(message) {
+  const text = String(message || '');
+  const direct = text.match(/\b(iPhone\s?\d{1,2}(?:\s?(?:Pro Max|Pro|Plus|Mini))?|Samsung\s?(?:Galaxy\s?)?[a-z0-9\s]{2,24}|Galaxy\s?[a-z0-9\s]{2,24}|Pixel\s?\d[a-z\s]{0,18})\b/i);
+  if (direct?.[1]) return direct[1].replace(/\s+/g, ' ').trim();
+
+  const relation = text.match(/(?:compatible with|works with|fit(?:s)?|support(?:s)?|for)\s+([a-z0-9\s+\-]{3,40})/i);
+  return relation?.[1]?.replace(/\s+/g, ' ').trim() || '';
+}
+
+function productCompatibilityScore(product, device) {
+  const target = String(device || '').toLowerCase();
+  if (!target) return 0;
+
+  const compatibility = (product.device_compatibility || []).map(item => String(item || '').toLowerCase());
+  if (compatibility.some(item => item.includes(target) || target.includes(item))) return 1;
+
+  const hay = [
+    product.name,
+    product.description,
+    product.short_description,
+    product.brand,
+    product.category,
+    ...(product.tags || [])
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const tokens = tokenize(target).filter(tok => !['phone', 'case', 'cover', 'for', 'with', 'device'].includes(tok));
+  if (!tokens.length) return 0;
+  const matched = tokens.reduce((sum, tok) => sum + (hay.includes(tok) ? 1 : 0), 0);
+  return matched / tokens.length;
+}
+
+function summarizeProduct(product) {
+  return {
+    _id: product._id,
+    name: product.name,
+    slug: product.slug,
+    price: product.price,
+    compare_price: product.compare_price,
+    brand: product.brand,
+    category: product.category,
+    images: product.images,
+    thumbnail: product.thumbnail,
+    ratings_avg: product.ratings_avg,
+    reviews_count: product.reviews_count,
+    stock_status: product.stock_status,
+    device_compatibility: product.device_compatibility
+  };
+}
+
+function comparisonScore(product) {
+  const rating = Math.min(1, Number(product.ratings_avg || 0) / 5);
+  const reviewSignal = Math.min(1, Math.log10(Number(product.reviews_count || 0) + 1) / 3);
+  const value = product.compare_price && product.compare_price > product.price
+    ? Math.min(1, (product.compare_price - product.price) / product.compare_price)
+    : 0.25;
+  const stock = product.stock_status === 'In Stock' ? 1 : product.stock_status === 'Limited' ? 0.45 : 0;
+  return rating * 0.38 + reviewSignal * 0.18 + value * 0.24 + stock * 0.2;
+}
+
+async function getProductsForComparison({ text, compareItems = [] }) {
+  const ids = (compareItems || []).map(item => item?._id || item?.product_id).filter(Boolean).slice(0, 3);
+  if (ids.length >= 2) {
+    const products = await Product.find({ _id: { $in: ids }, is_active: true }).lean();
+    const ordered = ids.map(id => products.find(p => String(p._id) === String(id))).filter(Boolean);
+    if (ordered.length >= 2) return ordered;
+  }
+
+  const parsed = parseDiscoveryQuery(text);
+  const products = await Product.find({ is_active: true }).sort('-views -ratings_avg').limit(120).lean();
+  return rankProductsForDiscovery(products, parsed).slice(0, 3);
+}
+
+async function buildComparisonResponse({ text, compareItems = [] }) {
+  const products = await getProductsForComparison({ text, compareItems });
+  if (products.length < 2) {
+    return {
+      reply: 'Pick at least two products using the Compare button, or ask me to compare specific items by name.',
+      products: products.map(summarizeProduct),
+      quickReplies: ['Show trending products', 'Find cases for iPhone 15', 'Recommend accessories for me']
+    };
+  }
+
+  const ranked = products
+    .map(product => ({ product, score: comparisonScore(product) }))
+    .sort((a, b) => b.score - a.score);
+  const winner = ranked[0].product;
+  const bestValue = products
+    .slice()
+    .sort((a, b) => Number(a.price || 0) - Number(b.price || 0))[0];
+  const items = products.map(product => ({
+    ...summarizeProduct(product),
+    comparisonNotes: [
+      `${Number(product.ratings_avg || 0).toFixed(1)} rating`,
+      product.stock_status,
+      product.compare_price && product.compare_price > product.price
+        ? `${Math.round(((product.compare_price - product.price) / product.compare_price) * 100)}% off`
+        : 'standard price'
+    ]
+  }));
+
+  return {
+    reply: `${winner.name} is the strongest pick overall. ${bestValue._id.equals?.(winner._id) || String(bestValue._id) === String(winner._id) ? 'It also gives the best value.' : `${bestValue.name} is the lowest-price option.`}`,
+    products: items,
+    comparison: {
+      items,
+      winner: `${winner.name} balances rating, stock, and value best.`
+    },
+    quickReplies: ['Add top item to cart', 'Recommend a bundle for my cart', 'Check compatibility']
+  };
+}
+
+async function buildCompatibilityResponse(text) {
+  const device = extractDeviceQuery(text);
+  if (!device) {
+    return {
+      reply: 'Tell me the device model, for example: "Is this compatible with iPhone 15 Pro?"',
+      compatibility: { isCompatible: false, reason: 'Device model was not clear.' },
+      quickReplies: ['Check iPhone 15 compatibility', 'Find cases for iPhone 15', 'Show compatible accessories']
+    };
+  }
+
+  const products = await Product.find({ is_active: true }).sort('-views -ratings_avg').limit(160).lean();
+  const ranked = products
+    .map(product => ({ product, score: productCompatibilityScore(product, device) }))
+    .filter(item => item.score >= 0.45)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return comparisonScore(b.product) - comparisonScore(a.product);
+    })
+    .slice(0, 8);
+
+  if (!ranked.length) {
+    return {
+      reply: `I could not confirm compatible products for ${device}. Try searching by the exact model or browse universal chargers/cables.`,
+      compatibility: { isCompatible: false, reason: `No strong match found for ${device}.` },
+      quickReplies: ['Show universal chargers', 'Show cables', 'Contact support']
+    };
+  }
+
+  const top = ranked[0].product;
+  return {
+    reply: `Yes, I found ${ranked.length} products that look compatible with ${device}. Top match: ${top.name}.`,
+    products: ranked.map(item => summarizeProduct(item.product)),
+    compatibility: {
+      isCompatible: true,
+      device,
+      reason: `${top.name} has the strongest compatibility match for ${device}.`
+    },
+    quickReplies: ['Compare items for me', 'Add top item to cart', 'Recommend a bundle for my cart']
+  };
+}
+
+async function buildAssistantAnalytics() {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [sessions, activeProducts, searchBehaviors, recentOrders] = await Promise.all([
+    UserBehavior.countDocuments({ updatedAt: { $gte: since } }),
+    Product.countDocuments({ is_active: true }),
+    UserBehavior.find({ updatedAt: { $gte: since } }, 'search_queries viewed_products clicked_products recommended_products last_cart_activity checkout_started_at').lean(),
+    Order.find({ createdAt: { $gte: since } }, 'products.product_id products.name total_price').lean()
+  ]);
+
+  const searchCounts = new Map();
+  const productSignals = new Map();
+
+  for (const behavior of searchBehaviors) {
+    for (const q of behavior.search_queries || []) {
+      const key = String(q || '').trim().toLowerCase();
+      if (key) searchCounts.set(key, (searchCounts.get(key) || 0) + 1);
+    }
+    for (const id of [...(behavior.viewed_products || []), ...(behavior.clicked_products || []), ...(behavior.recommended_products || [])]) {
+      const key = String(id);
+      productSignals.set(key, (productSignals.get(key) || 0) + 1);
+    }
+  }
+
+  for (const order of recentOrders) {
+    for (const item of order.products || []) {
+      const key = String(item.product_id || '');
+      if (key) productSignals.set(key, (productSignals.get(key) || 0) + 2);
+    }
+  }
+
+  const trendingIds = [...productSignals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id]) => id);
+  const trendingProducts = trendingIds.length
+    ? await Product.find({ _id: { $in: trendingIds }, is_active: true }).lean()
+    : [];
+
+  return {
+    sessions,
+    activeProducts,
+    topSearches: [...searchCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([query, count]) => ({ query, count })),
+    trendingProducts: trendingProducts.map(summarizeProduct),
+    insightCards: [
+      searchCounts.size ? 'Search intent is active this month. Use top searches for SEO product copy.' : 'No strong search trends captured yet.',
+      trendingProducts[0] ? `${trendingProducts[0].name} is receiving the strongest chatbot demand signal.` : 'Promote best sellers to generate chatbot demand signals.',
+      'Chatbot stores behavior signals for recommendations, search learning, and abandoned cart nudges.'
+    ]
+  };
+}
+
+function parseDiscountQuery(message) {
+  const q = String(message || '').toLowerCase();
+  const category = CATEGORIES.find(cat => q.includes(cat.toLowerCase()));
+  const asksCategories = /(which|what).*(categories?|category).*(discount|deal|offer|sale)|categories?.*(have|with).*(discount|deal|offer|sale)/i.test(q);
+
+  const keyword = q
+    .replace(/show|find|what|which|any|for|me|please|products?|items?|discount|discounts|deals?|offers?|sale|price|off|on|under|above|below|best|top|categories?|have|with|that|currently|available/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    category,
+    keyword,
+    asksCategories
+  };
 }
 
 function faqIntent(message) {
@@ -441,16 +843,47 @@ router.get('/product/:id', async (req, res) => {
   }
 });
 
+router.get('/status', (req, res) => {
+  const ai = resolveAIProvider();
+  const aiEnabled = Boolean(ai);
+  res.json({
+    success: true,
+    aiEnabled,
+    provider: ai?.provider || null,
+    model: ai?.model || null,
+    mode: aiEnabled ? `${ai.provider}+rules` : 'rules-only'
+  });
+});
+
+router.get('/analytics', async (req, res) => {
+  try {
+    const user = await getOptionalUser(req);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const analytics = await buildAssistantAnalytics();
+    return res.json({ success: true, analytics });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.post('/chat', async (req, res) => {
   try {
     const user = await getOptionalUser(req);
-    const { message, cart = [], sessionId, lastCartActivity } = req.body;
+    const { message, cart = [], compareItems = [], sessionId, lastCartActivity } = req.body;
     const resolvedSessionId = getOrCreateSessionId(sessionId);
     const text = String(message || '').trim();
 
     if (!text) {
       return res.status(400).json({ success: false, message: 'Message is required' });
     }
+
+    const behavior = await upsertBehavior({ userId: user?._id, sessionId: resolvedSessionId });
+    appendConversationTurn(behavior, 'user', text);
+    await behavior.save();
+    const recentConversation = buildRecentConversation(behavior.conversation_history, '');
 
     if (/^(hi|hello|hey|salam|aoa|assalam o alaikum)\b/i.test(text)) {
       return res.json({
@@ -516,24 +949,80 @@ router.post('/chat', async (req, res) => {
       }
     }
 
+    if (isChitChatIntent(text)) {
+      const fallbackReply = 'I am here for you. I can help you discover products, compare prices, track orders, and make checkout easier whenever you are ready.';
+      const smartReply = await generateSmartReply({
+        message: text,
+        user,
+        cart,
+        recentConversation,
+        intentHint: 'chitchat',
+        fallbackReply
+      });
+
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        reply: smartReply || fallbackReply,
+        quickReplies: ['Show trending products', 'Recommend accessories for me', 'Show discounts on chargers']
+      });
+    }
+
     const intentScores = detectIntentScores(text);
     const orderedIntents = Object.entries(intentScores).sort((a, b) => b[1] - a[1]);
     const best = orderedIntents[0];
     const second = orderedIntents[1];
     const isLowConfidence = best[1] < 0.65;
     const isAmbiguous = best[1] > 0 && second[1] > 0 && (best[1] - second[1]) < 0.12;
+    const isRecommendationHighConfidence = best[0] === 'recommendation' && best[1] >= 0.85;
+    const isDiscountHighConfidence = best[0] === 'discount' && best[1] >= 0.85;
 
-    if (isLowConfidence || isAmbiguous) {
+    if (isLowConfidence || (isAmbiguous && !isRecommendationHighConfidence && !isDiscountHighConfidence)) {
+      const defaultReply = 'I can do that. Do you want product search, recommendations, order tracking, cart help, or FAQs?';
+      const smartReply = await generateSmartReply({
+        message: text,
+        user,
+        cart,
+        recentConversation,
+        intentHint: 'clarification',
+        fallbackReply: defaultReply
+      });
       return res.json({
         success: true,
         sessionId: resolvedSessionId,
-        reply: 'I can do that. Do you want product search, recommendations, order tracking, cart help, or FAQs?',
+        reply: smartReply || defaultReply,
         confidence: { topIntent: best[0], topScore: Number(best[1].toFixed(2)) },
         quickReplies: getQuickRepliesForUser(user)
       });
     }
 
     const confidentIntent = best[1] >= 0.78 ? best[0] : null;
+
+    if (isComparisonIntent(text) || confidentIntent === 'comparison') {
+      const comparison = await buildComparisonResponse({ text, compareItems });
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        ...comparison,
+        confidence: {
+          topIntent: best[0],
+          topScore: Number(best[1].toFixed(2))
+        }
+      });
+    }
+
+    if (isCompatibilityIntent(text) || confidentIntent === 'compatibility') {
+      const compatibility = await buildCompatibilityResponse(text);
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        ...compatibility,
+        confidence: {
+          topIntent: best[0],
+          topScore: Number(best[1].toFixed(2))
+        }
+      });
+    }
 
     const faq = faqIntent(text);
     if (faq) {
@@ -542,11 +1031,121 @@ router.post('/chat', async (req, res) => {
         returns: 'You can request returns within 7 days for unused items in original packaging. Refunds are processed after quality check.',
         payment: 'We support JazzCash, EasyPaisa, PayPal, and Cash on Delivery (COD).'
       };
+      const smartReply = await generateSmartReply({
+        message: text,
+        user,
+        cart,
+        recentConversation,
+        intentHint: `faq_${faq}`,
+        fallbackReply: faqReplies[faq]
+      });
       return res.json({
         success: true,
         sessionId: resolvedSessionId,
-        reply: faqReplies[faq],
+        reply: smartReply || faqReplies[faq],
         quickReplies: ['Track my latest order', 'Show trending products', 'Open Help Center']
+      });
+    }
+
+    if (isDiscountIntent(text) || confidentIntent === 'discount') {
+      const parsed = parseDiscountQuery(text);
+      const query = {
+        is_active: true,
+        is_draft: { $ne: true },
+        compare_price: { $gt: 0 },
+        $expr: { $gt: ['$compare_price', '$price'] }
+      };
+
+      if (parsed.category) {
+        query.category = parsed.category;
+      }
+
+      if (parsed.keyword) {
+        query.$or = [
+          { name: new RegExp(parsed.keyword, 'i') },
+          { description: new RegExp(parsed.keyword, 'i') },
+          { brand: new RegExp(parsed.keyword, 'i') },
+          { category: new RegExp(parsed.keyword, 'i') }
+        ];
+      }
+
+      let products = await Product.find(query).limit(80).lean();
+      if (!products.length && query.$or) {
+        delete query.$or;
+        products = await Product.find(query).limit(80).lean();
+      }
+
+      products = products
+        .map(p => {
+          const compare = Number(p.compare_price || 0);
+          const current = Number(p.price || 0);
+          const discountPercent = compare > current ? Math.round(((compare - current) / compare) * 100) : 0;
+          return { ...p, discountPercent };
+        })
+        .filter(p => p.discountPercent > 0)
+        .sort((a, b) => {
+          if (b.discountPercent !== a.discountPercent) return b.discountPercent - a.discountPercent;
+          if ((b.ratings_avg || 0) !== (a.ratings_avg || 0)) return (b.ratings_avg || 0) - (a.ratings_avg || 0);
+          return (b.views || 0) - (a.views || 0);
+        });
+
+      if (!products.length) {
+        return res.json({
+          success: true,
+          sessionId: resolvedSessionId,
+          reply: 'I could not find active discounted items for that request right now. Try asking for discounts by category, like chargers or cases.',
+          quickReplies: ['Show discounts on chargers', 'Show discounts on cases', 'Show trending products']
+        });
+      }
+
+      if (parsed.asksCategories && !parsed.category) {
+        const categoryMap = new Map();
+        for (const p of products) {
+          const cat = p.category || 'Other';
+          const existing = categoryMap.get(cat) || { count: 0, maxDiscount: 0 };
+          existing.count += 1;
+          existing.maxDiscount = Math.max(existing.maxDiscount, p.discountPercent || 0);
+          categoryMap.set(cat, existing);
+        }
+
+        const categories = [...categoryMap.entries()]
+          .sort((a, b) => {
+            if (b[1].maxDiscount !== a[1].maxDiscount) return b[1].maxDiscount - a[1].maxDiscount;
+            return b[1].count - a[1].count;
+          })
+          .slice(0, 8)
+          .map(([name, data]) => ({
+            name,
+            count: data.count,
+            maxDiscount: data.maxDiscount
+          }));
+
+        const categoryText = categories
+          .map(c => `${c.name} (${c.maxDiscount}% off, ${c.count} items)`)
+          .join(', ');
+
+        const previewProducts = products.slice(0, 8);
+
+        return res.json({
+          success: true,
+          sessionId: resolvedSessionId,
+          reply: `Categories with active discounts right now: ${categoryText}.`,
+          categories,
+          products: previewProducts,
+          quickReplies: ['Show discounts on chargers', 'Show discounts on cases', 'Show top discounted items']
+        });
+      }
+
+      products = products.slice(0, 10);
+
+      const top = products[0];
+      const scope = parsed.category ? ` in ${parsed.category}` : '';
+      return res.json({
+        success: true,
+        sessionId: resolvedSessionId,
+        reply: `Here are the best discounts${scope}. Top deal: ${top.name} at ${top.discountPercent}% off.`,
+        products,
+        quickReplies: ['Show more discounted items', 'Add top item to cart', 'Apply coupon GLAM10']
       });
     }
 
@@ -801,10 +1400,20 @@ router.post('/chat', async (req, res) => {
       });
     }
 
+    const fallbackReply = 'I can help with product search, recommendations, order tracking, cart updates, coupons, and FAQs. Try: “show me chargers under 3000”.';
+    const smartFallback = await generateSmartReply({
+      message: text,
+      user,
+      cart,
+      recentConversation,
+      intentHint: 'general',
+      fallbackReply
+    });
+
     return res.json({
       success: true,
       sessionId: resolvedSessionId,
-      reply: 'I can help with product search, recommendations, order tracking, cart updates, coupons, and FAQs. Try: “show me chargers under 3000”.',
+      reply: smartFallback || fallbackReply,
       quickReplies: getQuickRepliesForUser(user)
     });
   } catch (err) {

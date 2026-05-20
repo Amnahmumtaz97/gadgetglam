@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+function generateTrackingNumber() {
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `GG-${datePart}-${randomPart}`;
+}
+
 function randomTrackingIntervalMs() {
   const minMs = 2 * 60 * 60 * 1000;
   const maxMs = 3 * 60 * 60 * 1000;
@@ -43,6 +49,13 @@ const OrderSchema = new mongoose.Schema({
   notes: String
 
 }, { timestamps: true });
+
+OrderSchema.pre('save', function (next) {
+  if (!this.tracking_number) {
+    this.tracking_number = generateTrackingNumber();
+  }
+  next();
+});
 
 // ── REVIEW ─────────────────────────────────────────────────
 const ReviewSchema = new mongoose.Schema({

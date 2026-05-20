@@ -6,6 +6,10 @@ import SEOHead from '../components/common/SEOHead';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/product/ProductCard';
+import CategorySidebar from '../components/product/CategorySidebar';
+import SelectMenu from '../components/ui/SelectMenu';
+import { slugToCategoryName } from '../lib/categories';
+import { PRODUCT_SORT_OPTIONS } from '../lib/sortOptions';
 import toast from 'react-hot-toast';
 
 export function CartPage() {
@@ -35,77 +39,71 @@ export function CartPage() {
   return (
     <>
       <SEOHead title="Your Cart | GadgetGlam" description="Review your cart and checkout." />
-      <div className="container" style={{padding:'40px 0 80px'}}>
-        <h1 style={{fontFamily:'var(--font-display)',fontSize:'32px',marginBottom:'32px'}}>Your Cart 🛒</h1>
+      <div className="container page-shell">
+        <h1 className="mb-8 text-4xl font-black text-theme">Your Cart</h1>
         {cart.length === 0 ? (
-          <div style={{textAlign:'center',padding:'80px 0',color:'var(--gray-500)'}}>
-            <div style={{fontSize:'64px',marginBottom:'16px'}}>🛒</div>
-            <h2>Your cart is empty</h2>
-            <Link to="/products" className="btn-primary" style={{display:'inline-block',marginTop:'20px'}}>Shop Now</Link>
+          <div className="grid place-items-center rounded-4xl border border-theme bg-theme-panel py-24 text-center text-theme-muted">
+            <div className="mb-4 text-6xl">🛒</div>
+            <h2 className="text-2xl font-bold text-theme">Your cart is empty</h2>
+            <Link to="/products" className="mt-5 inline-flex rounded-2xl bg-gradient-to-r from-[var(--accent-yellow)] to-[var(--accent-gold)] px-5 py-3 font-semibold text-on-accent">Shop Now</Link>
           </div>
         ) : (
-          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:'32px',alignItems:'start'}}>
+          <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
             <div>
               {cart.map(item => (
-                <div key={item._id} style={{background:'#fff',borderRadius:'16px',padding:'20px',marginBottom:'16px',border:'1.5px solid var(--gray-200)',display:'flex',gap:'16px',alignItems:'center'}}>
-                  <div style={{width:'80px',height:'80px',background:'var(--purple-faint)',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'36px',flexShrink:'0'}}>
-                    {item.thumbnail ? <img src={item.thumbnail} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'12px'}} /> : '📱'}
+                <div key={item._id} className="mb-4 flex items-center gap-4 rounded-4xl border border-theme bg-theme-panel p-4">
+                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[var(--surface-2)]">
+                    {item.thumbnail ? <img src={item.thumbnail} alt={item.name} className="h-full w-full object-cover" /> : '📱'}
                   </div>
-                  <div style={{flex:'1'}}>
-                    <div style={{fontWeight:'700',fontSize:'15px',marginBottom:'4px'}}>{item.name}</div>
-                    <div style={{color:'var(--purple)',fontWeight:'700',fontFamily:'var(--font-display)',fontSize:'18px'}}>PKR {item.price.toLocaleString()}</div>
+                  <div className="flex-1">
+                    <div className="text-base font-semibold text-theme">{item.name}</div>
+                    <div className="text-sm font-bold text-[var(--accent-yellow)]">PKR {item.price.toLocaleString()}</div>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                    <div style={{display:'flex',alignItems:'center',border:'1.5px solid var(--gray-200)',borderRadius:'10px',overflow:'hidden'}}>
-                      <button style={{background:'var(--gray-100)',border:'none',padding:'8px 12px',fontSize:'16px'}} onClick={() => updateQty(item._id, item.qty - 1)}>−</button>
-                      <span style={{padding:'8px 14px',fontWeight:'700'}}>{item.qty}</span>
-                      <button style={{background:'var(--gray-100)',border:'none',padding:'8px 12px',fontSize:'16px'}} onClick={() => updateQty(item._id, item.qty + 1)}>+</button>
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex items-center overflow-hidden rounded-2xl border border-theme bg-theme-panel">
+                      <button className="px-4 py-3 text-theme" onClick={() => updateQty(item._id, item.qty - 1)}>−</button>
+                      <span className="px-4 py-3 font-semibold text-theme">{item.qty}</span>
+                      <button className="px-4 py-3 text-theme" onClick={() => updateQty(item._id, item.qty + 1)}>+</button>
                     </div>
-                    <button style={{background:'var(--red)',color:'#fff',border:'none',borderRadius:'10px',padding:'8px 14px',fontWeight:'600'}} onClick={() => removeFromCart(item._id)}>Remove</button>
+                    <button className="rounded-2xl border border-theme bg-theme-panel px-4 py-3 text-sm font-semibold text-theme-muted" onClick={() => removeFromCart(item._id)}>Remove</button>
                   </div>
                 </div>
               ))}
-              <button style={{background:'none',border:'none',color:'var(--gray-500)',cursor:'pointer',fontSize:'13px'}} onClick={clearCart}>Clear all items</button>
+              <button className="text-sm text-theme-muted underline underline-offset-4" onClick={clearCart}>Clear all items</button>
             </div>
 
-            <div style={{background:'#fff',borderRadius:'20px',padding:'28px',border:'1.5px solid var(--gray-200)',position:'sticky',top:'120px'}}>
-              <h2 style={{fontFamily:'var(--font-display)',fontSize:'22px',marginBottom:'20px'}}>Order Summary</h2>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:'15px',marginBottom:'10px'}}><span>Subtotal</span><strong>PKR {subtotal.toLocaleString()}</strong></div>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:'15px',marginBottom:'14px',color:'var(--green)'}}><span>Delivery</span><strong>FREE</strong></div>
-              {/* Coupon code */}
-              <div style={{marginBottom:'14px'}}>
-                <div style={{display:'flex',gap:'8px',marginBottom: couponApplied ? '8px' : '0'}}>
+            <div className="sticky top-28 rounded-4xl border border-theme bg-theme-panel p-6">
+              <h2 className="mb-5 text-2xl font-black text-theme">Order Summary</h2>
+              <div className="mb-3 flex justify-between text-sm text-theme-muted"><span>Subtotal</span><strong>PKR {subtotal.toLocaleString()}</strong></div>
+              <div className="mb-4 flex justify-between text-sm text-[var(--accent-yellow)]"><span>Delivery</span><strong>FREE</strong></div>
+              <div className="mb-4">
+                <div className="mb-2 flex gap-2">
                   <input
                     type="text" placeholder="Coupon code (try GLAM10)"
                     value={couponInput} onChange={e => setCouponInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
                     disabled={couponApplied}
-                    style={{flex:'1',border:'1.5px solid var(--gray-200)',borderRadius:'10px',padding:'9px 12px',fontSize:'13px',fontFamily:'inherit',outline:'none',opacity: couponApplied ? .6 : 1}}
+                    className="flex-1 rounded-2xl border border-theme bg-theme-panel px-4 py-3 text-sm text-theme outline-none placeholder:text-theme-muted disabled:opacity-60"
                   />
                   <button
                     onClick={handleApplyCoupon} disabled={couponApplied}
-                    style={{background: couponApplied ? 'var(--gray-100)' : 'var(--purple)',color: couponApplied ? 'var(--gray-500)' : '#fff',border:'none',borderRadius:'10px',padding:'9px 14px',fontWeight:'600',fontSize:'13px',cursor: couponApplied ? 'default' : 'pointer',whiteSpace:'nowrap'}}
+                    className="rounded-2xl bg-gradient-to-r from-[var(--accent-yellow)] to-[var(--accent-gold)] px-4 py-3 text-sm font-semibold text-on-accent disabled:opacity-60"
                   >{couponApplied ? 'Applied ✓' : 'Apply'}</button>
                 </div>
                 {couponApplied && (
                   <>
-                    <div style={{display:'flex',justifyContent:'space-between',color:'var(--green)',fontSize:'13px',fontWeight:'600'}}>
+                    <div className="flex justify-between text-sm font-semibold text-emerald-300">
                       <span>✅ {couponCode} — 10% off</span><strong>−PKR {couponDiscount.toLocaleString()}</strong>
                     </div>
-                    <button
-                      onClick={clearCoupon}
-                      style={{marginTop:'8px',background:'none',border:'none',padding:0,color:'var(--gray-500)',fontSize:'12px',textDecoration:'underline',cursor:'pointer'}}
-                    >
-                      Remove coupon
-                    </button>
+                    <button onClick={clearCoupon} className="mt-2 text-xs text-theme-muted underline underline-offset-4">Remove coupon</button>
                   </>
                 )}
               </div>
-              <div style={{borderTop:'1px solid var(--gray-200)',paddingTop:'14px',display:'flex',justifyContent:'space-between',fontSize:'18px',fontWeight:'700'}}>
-                <span>Total</span><span style={{color:'var(--purple)',fontFamily:'var(--font-display)'}}>PKR {finalTotal.toLocaleString()}</span>
+              <div className="flex justify-between border-t border-theme pt-4 text-lg font-bold text-theme">
+                <span>Total</span><span className="text-[var(--accent-yellow)]">PKR {finalTotal.toLocaleString()}</span>
               </div>
-              <button className="btn-primary" style={{width:'100%',padding:'14px',marginTop:'20px',fontSize:'15px'}} onClick={() => window.location.href='/checkout'}>Proceed to Checkout</button>
-              <Link to="/products" style={{display:'block',textAlign:'center',marginTop:'14px',fontSize:'13px',color:'var(--gray-500)'}}>← Continue Shopping</Link>
+              <button className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[var(--accent-yellow)] via-[var(--accent-gold)] to-[var(--accent-gold)] px-4 py-3 font-semibold text-on-accent" onClick={() => window.location.href='/checkout'}>Proceed to Checkout</button>
+              <Link to="/products" className="mt-4 block text-center text-sm text-theme-muted">Continue Shopping</Link>
             </div>
           </div>
         )}
@@ -120,7 +118,8 @@ export function CategoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [sort, setSort]         = useState('newest');
-  const catName = category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const catName = slugToCategoryName(category);
+  const isBundles = catName === 'Bundles';
 
   useEffect(() => {
     setLoading(true);
@@ -138,34 +137,62 @@ export function CategoryPage() {
         canonical={`https://www.gadgetglam.pk/category/${category}`}
         category={catName}
       />
-      <div className="container" style={{padding:'40px 0 80px'}}>
-        <h1 style={{fontFamily:'var(--font-display)',fontSize:'32px',marginBottom:'8px'}}>{catName}</h1>
-        <p style={{color:'var(--gray-500)',marginBottom:'24px',fontSize:'15px'}}>
-          Discover our curated collection of {catName.toLowerCase()} for all devices.
-        </p>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'24px',flexWrap:'wrap',gap:'12px'}}>
-          <span style={{fontSize:'14px',color:'var(--gray-500)'}}>{products.length} products</span>
-          <select
-            value={sort} onChange={e => setSort(e.target.value)}
-            style={{border:'1.5px solid var(--gray-200)',borderRadius:'10px',padding:'8px 14px',fontFamily:'var(--font-body)',fontSize:'13px',background:'#fff',cursor:'pointer'}}
-          >
-            <option value="newest">Newest First</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-            <option value="rating">Top Rated</option>
-            <option value="popular">Most Popular</option>
-          </select>
+      <div className="container page-shell py-8 md:py-10">
+        <nav className="mb-6 flex flex-wrap items-center gap-2 text-sm text-theme-muted" aria-label="Breadcrumb">
+          <Link to="/" className="font-semibold hover:text-accent">Home</Link>
+          <span aria-hidden="true">/</span>
+          <Link to="/products" className="font-semibold hover:text-accent">Products</Link>
+          <span aria-hidden="true">/</span>
+          <span className="font-bold text-theme">{catName}</span>
+        </nav>
+
+        <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+          <CategorySidebar />
+
+          <div className="min-w-0">
+            <div className="mb-6 rounded-2xl border border-theme bg-theme-panel p-6 shadow-[var(--shadow)] md:p-8">
+              <h1 className="text-3xl font-black tracking-tight text-theme md:text-4xl">
+                {isBundles ? 'Bundles & combo deals' : catName}
+              </h1>
+              <p className="mt-2 text-sm text-theme-muted md:text-base">
+                {isBundles
+                  ? 'Save more with curated multi-item packs — each deal lists exactly what is included in the bundle.'
+                  : `Discover our curated collection of ${catName.toLowerCase()} for all devices.`}
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-theme-muted">
+                  {loading ? 'Loading…' : `${products.length} product${products.length === 1 ? '' : 's'}`}
+                </span>
+                <SelectMenu
+                  value={sort}
+                  onChange={setSort}
+                  options={PRODUCT_SORT_OPTIONS}
+                  aria-label="Sort products"
+                  className="min-w-[200px]"
+                />
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="grid place-items-center py-20">
+                <div className="spinner" />
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {products.map((p) => <ProductCard key={p._id} product={p} />)}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-theme bg-theme-panel py-20 text-center text-theme-muted">
+                <div className="mb-4 text-5xl">📦</div>
+                <p className="font-semibold text-theme">No {catName} available yet</p>
+                <p className="mt-2 text-sm">Try another category from the sidebar, or check back soon.</p>
+                <Link to="/products" className="btn-gradient mt-6 inline-flex rounded-xl px-6 py-2.5 text-sm font-bold">
+                  Browse all products
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
-        {loading ? <div className="spinner" /> : products.length > 0 ? (
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'24px'}}>
-            {products.map(p => <ProductCard key={p._id} product={p} />)}
-          </div>
-        ) : (
-          <div style={{textAlign:'center',padding:'80px',color:'var(--gray-500)'}}>
-            <div style={{fontSize:'48px',marginBottom:'16px'}}>📦</div>
-            <p>No {catName} available yet. Check back soon!</p>
-          </div>
-        )}
       </div>
     </>
   );

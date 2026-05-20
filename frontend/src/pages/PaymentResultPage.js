@@ -15,6 +15,7 @@ export default function PaymentResultPage() {
   const ref = searchParams.get('ref');
   const reason = searchParams.get('reason');
   const code = searchParams.get('code');
+  const tracking = searchParams.get('tracking');
 
   useEffect(() => {
     if (ref) {
@@ -59,7 +60,7 @@ export default function PaymentResultPage() {
                 </p>
 
                 {order && (
-                  <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', border: '1.5px solid var(--gray-200)', marginBottom: '28px', textAlign: 'left' }}>
+                  <div style={{ background: 'var(--surface)', borderRadius: '16px', padding: '28px', border: '1.5px solid var(--border)', marginBottom: '28px', textAlign: 'left' }}>
                     <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', marginBottom: '16px', textAlign: 'center' }}>
                       Order Details
                     </h3>
@@ -69,8 +70,14 @@ export default function PaymentResultPage() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
                       <span style={{ color: 'var(--gray-500)' }}>Total Amount</span>
-                      <strong style={{ color: 'var(--purple)', fontFamily: 'var(--font-display)', fontSize: '18px' }}>
+                      <strong style={{ color: 'var(--accent-yellow)', fontFamily: 'var(--font-display)', fontSize: '18px' }}>
                         PKR {order.total_price?.toLocaleString()}
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
+                      <span style={{ color: 'var(--gray-500)' }}>Tracking ID</span>
+                      <strong style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                        {order.tracking_number || tracking || 'Pending'}
                       </strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--gray-100)' }}>
@@ -135,8 +142,14 @@ export default function PaymentResultPage() {
               </>
             )}
 
+            {isSuccess && (tracking || order?.tracking_number) && (
+              <p style={{ color: 'var(--gray-400)', fontSize: '12px', marginTop: '20px' }}>
+                Tracking ID: <strong style={{ color: 'var(--gray-700)', fontFamily: 'monospace' }}>{order?.tracking_number || tracking}</strong>
+              </p>
+            )}
+
             <p style={{ color: 'var(--gray-400)', fontSize: '12px', marginTop: '40px' }}>
-              Need help? <Link to="/" style={{ color: 'var(--purple)', textDecoration: 'none' }}>Contact Support</Link>
+              Need help? <Link to="/" style={{ color: 'var(--accent-yellow)', textDecoration: 'none' }}>Contact Support</Link>
             </p>
           </div>
         )}

@@ -1,0 +1,60 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="900" rx="64" fill="#000000"/>
+  <g filter="url(#blurA)">
+    <circle cx="455" cy="453" r="312" stroke="url(#ring)" stroke-width="18"/>
+    <ellipse cx="465" cy="722" rx="240" ry="50" fill="#2563EB" fill-opacity=".35"/>
+  </g>
+  <path d="M242 705C306 637 377 601 458 596C548 590 619 620 689 690C586 736 482 750 374 737C326 731 282 720 242 705Z" fill="url(#rock)"/>
+  <g filter="url(#phoneShadow)">
+    <g transform="translate(298 115) rotate(16 162 318)">
+      <rect x="0" y="0" width="324" height="636" rx="58" fill="url(#phoneBody)" stroke="url(#phoneStroke)" stroke-width="6"/>
+      <rect x="24" y="24" width="276" height="588" rx="42" fill="url(#backGlass)" opacity=".92"/>
+      <circle cx="164" cy="328" r="94" stroke="url(#magsafe)" stroke-width="18"/>
+      <circle cx="164" cy="328" r="16" fill="#111111" stroke="#2563EB" stroke-width="4"/>
+      <rect x="34" y="34" width="118" height="132" rx="34" fill="#080808" stroke="#334155" stroke-width="3"/>
+      <circle cx="70" cy="75" r="24" fill="#111111" stroke="#93C5FD" stroke-width="5"/>
+      <circle cx="119" cy="75" r="24" fill="#111111" stroke="#93C5FD" stroke-width="5"/>
+      <circle cx="93" cy="124" r="24" fill="#111111" stroke="#60A5FA" stroke-width="5"/>
+      <circle cx="122" cy="124" r="9" fill="#2563EB"/>
+      <path d="M157 458C168 442 185 442 196 458C185 473 168 473 157 458Z" fill="#111111"/>
+    </g>
+  </g>
+  <defs>
+    <linearGradient id="ring" x1="205" y1="139" x2="708" y2="742" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset=".44" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="304" y1="601" x2="632" y2="755" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111111"/>
+      <stop offset=".55" stop-color="#111111"/>
+      <stop offset="1" stop-color="#111111"/>
+    </linearGradient>
+    <linearGradient id="phoneBody" x1="24" y1="20" x2="322" y2="607" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111111"/>
+      <stop offset=".38" stop-color="#111111"/>
+      <stop offset="1" stop-color="#111111"/>
+    </linearGradient>
+    <linearGradient id="backGlass" x1="50" y1="33" x2="261" y2="598" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#222222"/>
+      <stop offset=".42" stop-color="#111111"/>
+      <stop offset="1" stop-color="#111111"/>
+    </linearGradient>
+    <linearGradient id="phoneStroke" x1="0" y1="0" x2="324" y2="636" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#93C5FD"/>
+      <stop offset=".5" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="magsafe" x1="70" y1="234" x2="258" y2="422" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <filter id="blurA" x="80" y="78" width="750" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <filter id="phoneShadow" x="150" y="30" width="600" height="800" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="34" stdDeviation="34" flood-color="#2563EB" flood-opacity=".42"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#2563EB" flood-opacity=".35"/>
+    </filter>
+  </defs>
+</svg>

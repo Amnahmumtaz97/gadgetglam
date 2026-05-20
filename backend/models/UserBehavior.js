@@ -7,6 +7,7 @@ const UserBehaviorSchema = new mongoose.Schema({
   clicked_products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   recommended_products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   search_queries: [{ type: String }],
+  conversation_history: [{ type: String }],
   last_cart_activity: { type: Date },
   checkout_started_at: { type: Date }
 }, { timestamps: true });

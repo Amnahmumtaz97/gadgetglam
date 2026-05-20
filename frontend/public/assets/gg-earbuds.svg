@@ -1,0 +1,49 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="700" rx="56" fill="#000000"/>
+  <ellipse cx="450" cy="516" rx="260" ry="62" fill="#2563EB" fill-opacity=".32" filter="url(#soft)"/>
+  <circle cx="450" cy="330" r="250" fill="url(#glow)" opacity=".78"/>
+  <g filter="url(#shadow)">
+    <rect x="292" y="320" width="316" height="190" rx="68" fill="url(#case)" stroke="url(#stroke)" stroke-width="5"/>
+    <path d="M330 342C344 390 383 418 450 418C517 418 556 390 570 342" stroke="#2563EB" stroke-width="10" stroke-linecap="round"/>
+    <g transform="translate(308 142)">
+      <path d="M88 52C44 52 14 87 14 127C14 172 47 206 90 206C132 206 166 173 166 128C166 85 132 52 88 52Z" fill="url(#bud)" stroke="#2563EB" stroke-width="5"/>
+      <rect x="108" y="172" width="46" height="144" rx="23" fill="url(#stem)" stroke="#2563EB" stroke-width="5"/>
+      <circle cx="88" cy="128" r="26" fill="#2563EB"/>
+    </g>
+    <g transform="translate(426 142)">
+      <path d="M88 52C44 52 14 87 14 127C14 172 47 206 90 206C132 206 166 173 166 128C166 85 132 52 88 52Z" fill="url(#bud)" stroke="#2563EB" stroke-width="5"/>
+      <rect x="26" y="172" width="46" height="144" rx="23" fill="url(#stem)" stroke="#2563EB" stroke-width="5"/>
+      <circle cx="88" cy="128" r="26" fill="#2563EB"/>
+    </g>
+  </g>
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(450 330) rotate(90) scale(250)">
+      <stop stop-color="#2563EB" stop-opacity=".58"/>
+      <stop offset=".52" stop-color="#2563EB" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="case" x1="292" y1="320" x2="608" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#252525"/>
+      <stop offset=".58" stop-color="#111111"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+    <linearGradient id="bud" x1="14" y1="52" x2="166" y2="206" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#242424"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="26" y1="172" x2="154" y2="316" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202020"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="292" y1="320" x2="608" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <filter id="shadow" x="175" y="70" width="550" height="530" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="34" flood-color="#2563EB" flood-opacity=".36"/>
+    </filter>
+    <filter id="soft" x="140" y="394" width="620" height="244" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="25"/>
+    </filter>
+  </defs>
+</svg>

@@ -4,10 +4,11 @@ import axios from 'axios';
 import SEOHead from '../components/common/SEOHead';
 import toast from 'react-hot-toast';
 
-export default function OrderTrackingPage() {
+export default function OrderTrackingPage({ embedded = false }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [payingOrderId, setPayingOrderId] = useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -27,12 +28,12 @@ export default function OrderTrackingPage() {
   const statusColor = (status) => {
     const colors = {
       Pending: '#d69e2e',
-      Confirmed: '#7c3aed',
-      Dispatched: '#3182ce',
+      Confirmed: 'var(--accent-yellow)',
+      Dispatched: 'var(--accent-gold)',
       Delivered: '#38a169',
       Cancelled: '#e53e3e',
-      Processing: '#7c3aed',
-      Shipped: '#3182ce'
+      Processing: 'var(--accent-yellow)',
+      Shipped: 'var(--accent-gold)'
     };
     return colors[status] || '#888';
   };
@@ -46,21 +47,58 @@ export default function OrderTrackingPage() {
     return colors[status] || '#888';
   };
 
-  return (
-    <>
-      <SEOHead title="My Orders | GadgetGlam" description="Track your GadgetGlam orders." />
-      <div className="container" style={{ padding: '40px 0 80px' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '32px', marginBottom: '8px' }}>
-          My Orders 🧾
-        </h1>
-        <p style={{ color: 'var(--gray-500)', marginBottom: '32px', fontSize: '15px' }}>
-          Track the status of your orders and view details.
-        </p>
+  const submitJazzCashForm = (jcUrl, params) => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = jcUrl;
 
+    Object.entries(params || {}).forEach(([key, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm('Cancel this order?')) return;
+    try {
+      const { data } = await axios.patch(`/api/orders/${orderId}/cancel`);
+      setOrders((prev) => prev.map((o) => (o._id === orderId ? data.order : o)));
+      toast.success('Order cancelled');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not cancel order');
+    }
+  };
+
+  const handlePayNow = async (orderId) => {
+    try {
+      setPayingOrderId(orderId);
+      const { data } = await axios.post(`/api/orders/${orderId}/initiate-jazzcash`);
+      if (data?.success && data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      if (!data?.success || !data?.jcUrl || !data?.params) {
+        throw new Error(data?.message || 'Unable to start payment');
+      }
+      submitJazzCashForm(data.jcUrl, data.params);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Could not start payment');
+      setPayingOrderId(null);
+    }
+  };
+
+  const ordersBody = (
+        <>
         {loading ? (
           <div className="spinner" />
         ) : orders.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--gray-500)' }}>
+          <div className="market-empty">
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>📦</div>
             <h2>No orders yet</h2>
             <p style={{ marginBottom: '24px' }}>You haven't placed any orders yet.</p>
@@ -74,9 +112,9 @@ export default function OrderTrackingPage() {
               <div
                 key={order._id}
                 style={{
-                  background: '#fff',
+                  background: 'var(--surface)',
                   borderRadius: '16px',
-                  border: '1.5px solid var(--gray-200)',
+                  border: '1.5px solid var(--border)',
                   overflow: 'hidden',
                   transition: 'all 0.2s'
                 }}
@@ -91,7 +129,7 @@ export default function OrderTrackingPage() {
                     gridTemplateColumns: '1fr 1fr 1fr 1fr auto',
                     gap: '16px',
                     alignItems: 'center',
-                    backgroundColor: expandedId === order._id ? 'var(--purple-faint)' : '#fff'
+                    backgroundColor: expandedId === order._id ? 'var(--accent-yellow-faint)' : 'var(--surface)'
                   }}
                 >
                   <div>
@@ -107,9 +145,14 @@ export default function OrderTrackingPage() {
                     <div style={{ fontSize: '12px', color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                       Total
                     </div>
-                    <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--purple)' }}>
+                    <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--accent-yellow)' }}>
                       PKR {order.total_price?.toLocaleString()}
                     </div>
+                    {order.tracking_number && (
+                      <div style={{ color: 'var(--gray-500)', fontSize: '12px', marginTop: '4px', fontFamily: 'monospace' }}>
+                        {order.tracking_number}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -157,7 +200,7 @@ export default function OrderTrackingPage() {
 
                 {/* Order Details - Expanded */}
                 {expandedId === order._id && (
-                  <div style={{ padding: '20px', borderTop: '1.5px solid var(--gray-200)', backgroundColor: 'var(--purple-faint)' }}>
+                  <div style={{ padding: '20px', borderTop: '1.5px solid var(--gray-200)', backgroundColor: 'var(--accent-yellow-faint)' }}>
                     {/* Items */}
                     <div style={{ marginBottom: '24px' }}>
                       <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--gray-700)' }}>
@@ -168,7 +211,7 @@ export default function OrderTrackingPage() {
                           <div
                             key={idx}
                             style={{
-                              background: '#fff',
+                              background: 'var(--surface)',
                               borderRadius: '12px',
                               padding: '12px',
                               display: 'flex',
@@ -182,7 +225,7 @@ export default function OrderTrackingPage() {
                                 width: '50px',
                                 height: '50px',
                                 borderRadius: '8px',
-                                background: 'var(--purple-faint)',
+                                background: 'var(--accent-yellow-faint)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -206,7 +249,7 @@ export default function OrderTrackingPage() {
                                 Qty: {item.quantity} × PKR {item.price?.toLocaleString()}
                               </div>
                             </div>
-                            <div style={{ fontWeight: '700', color: 'var(--purple)' }}>
+                            <div style={{ fontWeight: '700', color: 'var(--accent-yellow)' }}>
                               PKR {(item.price * item.quantity).toLocaleString()}
                             </div>
                           </div>
@@ -221,7 +264,7 @@ export default function OrderTrackingPage() {
                       </div>
                       <div
                         style={{
-                          background: '#fff',
+                          background: 'var(--surface)',
                           borderRadius: '12px',
                           padding: '12px',
                           border: '1px solid var(--gray-200)',
@@ -248,7 +291,7 @@ export default function OrderTrackingPage() {
                         </div>
                         <div
                           style={{
-                            background: '#fff',
+                            background: 'var(--surface)',
                             borderRadius: '12px',
                             padding: '12px',
                             border: '1px solid var(--gray-200)',
@@ -258,6 +301,53 @@ export default function OrderTrackingPage() {
                           }}
                         >
                           {order.tracking_number}
+                        </div>
+                      </div>
+                    )}
+
+                    {['Pending', 'Confirmed'].includes(order.order_status) && (
+                      <div style={{ marginBottom: '24px' }}>
+                        <button
+                          type="button"
+                          className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-400 transition hover:bg-rose-500/20"
+                          onClick={() => handleCancelOrder(order._id)}
+                        >
+                          Cancel order
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Payment Action */}
+                    {order.payment_status === 'Unpaid' && order.order_status !== 'Cancelled' && (
+                      <div style={{ marginBottom: '24px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--gray-700)' }}>
+                          💳 Complete Payment
+                        </div>
+                        <div
+                          style={{
+                            background: 'var(--surface)',
+                            borderRadius: '12px',
+                            padding: '12px',
+                            border: '1px solid var(--gray-200)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            flexWrap: 'wrap'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', color: 'var(--gray-700)' }}>
+                            This order is unpaid. You can pay now using JazzCash.
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-primary"
+                            disabled={payingOrderId === order._id}
+                            onClick={() => handlePayNow(order._id)}
+                            style={{ minWidth: '160px', opacity: payingOrderId === order._id ? 0.75 : 1 }}
+                          >
+                            {payingOrderId === order._id ? 'Redirecting...' : 'Pay Now'}
+                          </button>
                         </div>
                       </div>
                     )}
@@ -282,6 +372,18 @@ export default function OrderTrackingPage() {
             ))}
           </div>
         )}
+        </>
+  );
+
+  if (embedded) return <div>{ordersBody}</div>;
+
+  return (
+    <>
+      <SEOHead title="My Orders | GadgetGlam" description="Track your GadgetGlam orders." />
+      <div className="container market-page">
+        <h1 className="market-heading" style={{ marginBottom: '8px' }}>My Orders</h1>
+        <p className="market-subtitle" style={{ marginBottom: '32px' }}>Track status, pay, or cancel eligible orders.</p>
+        {ordersBody}
       </div>
     </>
   );

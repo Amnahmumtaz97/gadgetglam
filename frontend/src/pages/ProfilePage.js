@@ -5,8 +5,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-export default function ProfilePage() {
-  const { user, logout } = useAuth();
+export default function ProfilePage({ embedded = false }) {
+  const { user, logout, updateUser, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -49,7 +49,9 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await axios.put('/api/users/profile', formData);
+      const { data } = await axios.put('/api/users/profile', formData);
+      updateUser(data.user);
+      await refreshUser();
       toast.success('Profile updated!');
       setEditing(false);
     } catch (err) {
@@ -61,19 +63,12 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  return (
-    <>
-      <SEOHead title="My Profile | GadgetGlam" description="Manage your GadgetGlam account." />
-      <div className="container" style={{ padding: '40px 0 80px' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '32px', marginBottom: '32px' }}>
-          My Profile 👤
-        </h1>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '28px', alignItems: 'start' }}>
+  const content = (
+        <div className={embedded ? 'grid gap-6 lg:grid-cols-[1fr_1.2fr]' : 'market-grid-2'}>
           {/* Left: Profile Card */}
-          <div style={{ background: '#fff', borderRadius: '20px', padding: '28px', border: '1.5px solid var(--gray-200)', boxShadow: '0 4px 20px rgba(124,58,237,.08)' }}>
+          <div className="market-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#fff', fontWeight: '700', flexShrink: 0 }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--accent-yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#fff', fontWeight: '700', flexShrink: 0 }}>
                 {user.first_name?.[0]?.toUpperCase() || '👤'}
               </div>
               <div>
@@ -82,7 +77,7 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ color: 'var(--gray-500)', fontSize: '14px' }}>{user.email}</div>
                 {user.role === 'admin' && (
-                  <span style={{ background: 'var(--purple)', color: '#fff', fontSize: '11px', fontWeight: '700', padding: '2px 10px', borderRadius: '20px', marginTop: '4px', display: 'inline-block' }}>
+                  <span style={{ background: 'var(--accent-yellow)', color: '#fff', fontSize: '11px', fontWeight: '700', padding: '2px 10px', borderRadius: '20px', marginTop: '4px', display: 'inline-block' }}>
                     Admin
                   </span>
                 )}
@@ -99,24 +94,27 @@ export default function ProfilePage() {
                   📊 Admin Dashboard
                 </button>
               )}
-              <button
-                onClick={() => navigate('/orders')}
-                style={{
-                  width: '100%',
-                  padding: '11px',
-                  marginBottom: '10px',
-                  fontSize: '14px',
-                  background: 'var(--purple-light)',
-                  color: 'var(--purple)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
+              <Link
+                to="/account/orders"
+                className="mb-2.5 block w-full rounded-xl border-0 px-4 py-3 text-center text-sm font-semibold no-underline"
+                style={{ background: 'var(--accent-yellow-light)', color: 'var(--accent-yellow)' }}
               >
-                📦 View All Orders
-              </button>
+                View all orders
+              </Link>
+              <Link
+                to="/account/wishlist"
+                className="mb-2.5 block w-full rounded-xl border border-theme px-4 py-3 text-center text-sm font-semibold text-theme no-underline hover:bg-accent-light"
+              >
+                My wishlist
+              </Link>
+              <Link
+                to="/account/reviews"
+                className="mb-2.5 block w-full rounded-xl border border-theme px-4 py-3 text-center text-sm font-semibold text-theme no-underline hover:bg-accent-light"
+              >
+                My reviews
+              </Link>
               <button
+                type="button"
                 onClick={handleLogout}
                 style={{
                   width: '100%',
@@ -139,7 +137,7 @@ export default function ProfilePage() {
           <div>
             {/* Edit Profile Form */}
             {editing ? (
-              <div style={{ background: '#fff', borderRadius: '20px', padding: '28px', border: '1.5px solid var(--gray-200)', marginBottom: '28px' }}>
+              <div className="market-card" style={{ marginBottom: '28px' }}>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', marginBottom: '20px' }}>
                   Edit Profile
                 </h3>
@@ -153,7 +151,7 @@ export default function ProfilePage() {
                         type="text"
                         value={formData.first_name}
                         onChange={e => setFormData(p => ({ ...p, first_name: e.target.value }))}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--gray-200)', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                        className="input-theme mt-2 w-full rounded-xl px-4 py-3"
                       />
                     </div>
                     <div>
@@ -164,7 +162,7 @@ export default function ProfilePage() {
                         type="text"
                         value={formData.last_name}
                         onChange={e => setFormData(p => ({ ...p, last_name: e.target.value }))}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--gray-200)', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                        className="input-theme mt-2 w-full rounded-xl px-4 py-3"
                       />
                     </div>
                   </div>
@@ -177,7 +175,7 @@ export default function ProfilePage() {
                       type="text"
                       value={formData.shipping_address?.street || ''}
                       onChange={e => setFormData(p => ({ ...p, shipping_address: { ...p.shipping_address, street: e.target.value } }))}
-                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--gray-200)', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                      className="input-theme w-full rounded-xl px-4 py-3"
                     />
                   </div>
 
@@ -190,7 +188,7 @@ export default function ProfilePage() {
                         type="text"
                         value={formData.shipping_address?.city || ''}
                         onChange={e => setFormData(p => ({ ...p, shipping_address: { ...p.shipping_address, city: e.target.value } }))}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--gray-200)', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                        className="input-theme mt-2 w-full rounded-xl px-4 py-3"
                       />
                     </div>
                     <div>
@@ -201,7 +199,7 @@ export default function ProfilePage() {
                         type="text"
                         value={formData.shipping_address?.zip || ''}
                         onChange={e => setFormData(p => ({ ...p, shipping_address: { ...p.shipping_address, zip: e.target.value } }))}
-                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--gray-200)', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                        className="input-theme mt-2 w-full rounded-xl px-4 py-3"
                       />
                     </div>
                   </div>
@@ -236,12 +234,12 @@ export default function ProfilePage() {
                 </form>
               </div>
             ) : (
-              <div style={{ background: '#fff', borderRadius: '20px', padding: '28px', border: '1.5px solid var(--gray-200)', marginBottom: '28px' }}>
+              <div className="market-card" style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px' }}>Account Information</h3>
                   <button
                     onClick={() => setEditing(true)}
-                    style={{ background: 'none', border: 'none', color: 'var(--purple)', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-yellow)', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
                   >
                     ✏️ Edit
                   </button>
@@ -269,11 +267,11 @@ export default function ProfilePage() {
             )}
 
             {/* Recent Orders */}
-            <div style={{ background: '#fff', borderRadius: '20px', padding: '28px', border: '1.5px solid var(--gray-200)' }}>
+            <div className="market-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px' }}>Recent Orders</h3>
-                <Link to="/orders" style={{ color: 'var(--purple)', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
-                  View All →
+                <Link to="/account/orders" className="text-sm font-semibold text-accent hover:underline">
+                  View all →
                 </Link>
               </div>
 
@@ -306,9 +304,14 @@ export default function ProfilePage() {
                         <div style={{ color: 'var(--gray-500)', fontSize: '12px' }}>
                           {new Date(order.createdAt).toLocaleDateString()}
                         </div>
+                        {order.tracking_number && (
+                          <div style={{ color: 'var(--gray-500)', fontSize: '12px', marginTop: '4px', fontFamily: 'monospace' }}>
+                            Tracking: {order.tracking_number}
+                          </div>
+                        )}
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: '700', color: 'var(--purple)' }}>
+                        <div style={{ fontWeight: '700', color: 'var(--accent-yellow)' }}>
                           PKR {order.total_price?.toLocaleString()}
                         </div>
                         <span
@@ -317,8 +320,8 @@ export default function ProfilePage() {
                             borderRadius: '20px',
                             fontSize: '11px',
                             fontWeight: '700',
-                            background: 'rgba(124,58,237,.1)',
-                            color: 'var(--purple)',
+                            background: 'rgba(37,99,235,.1)',
+                            color: 'var(--accent-yellow)',
                             display: 'inline-block',
                             marginTop: '4px'
                           }}
@@ -333,6 +336,16 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <>
+      <SEOHead title="My Profile | GadgetGlam" description="Manage your GadgetGlam account." />
+      <div className="container market-page">
+        <h1 className="market-heading" style={{ marginBottom: '32px' }}>My Profile</h1>
+        {content}
       </div>
     </>
   );

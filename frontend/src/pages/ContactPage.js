@@ -43,7 +43,7 @@ export default function ContactPage() {
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr .9fr', gap: '20px' }}>
-          <form onSubmit={onSubmit} style={{ background: '#fff', border: '1.5px solid var(--gray-200)', borderRadius: '16px', padding: '20px' }}>
+          <form onSubmit={onSubmit} style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
             <div style={{ display: 'grid', gap: '12px' }}>
               <input name="name" value={form.name} onChange={onChange} placeholder="Your name" style={inputStyle} />
               <input name="email" value={form.email} onChange={onChange} placeholder="Your email" style={inputStyle} />
@@ -70,7 +70,7 @@ export default function ContactPage() {
 
 function InfoCard({ title, body }) {
   return (
-    <div style={{ background: '#fff', border: '1.5px solid var(--gray-200)', borderRadius: '14px', padding: '16px' }}>
+    <div style={{ background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '16px' }}>
       <h2 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '6px' }}>{title}</h2>
       <p style={{ color: 'var(--gray-600)', fontSize: '14px' }}>{body}</p>
     </div>

@@ -14,6 +14,23 @@ router.put('/profile', protect, async (req, res) => {
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 
+router.get('/wishlist', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('wishlist');
+    res.json({ success: true, wishlist: user?.wishlist || [] });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.get('/reviews', protect, async (req, res) => {
+  try {
+    const { Review } = require('../models/OrderReview');
+    const reviews = await Review.find({ user_id: req.user._id })
+      .sort('-createdAt')
+      .populate('product_id', 'name slug thumbnail');
+    res.json({ success: true, reviews });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 router.post('/wishlist/:productId', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);

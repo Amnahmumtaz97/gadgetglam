@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
@@ -11,6 +11,8 @@ import CheckoutPage from './pages/CheckoutPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import AccountHubPage from './pages/AccountHubPage';
+import MyReviewsPage from './pages/MyReviewsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import PaymentResultPage from './pages/PaymentResultPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
@@ -19,16 +21,20 @@ import ContactPage from './pages/ContactPage';
 import FAQPage from './pages/FAQPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import HelpCategoryPage from './pages/HelpCategoryPage';
+import WishlistPage from './pages/WishlistPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
 import AIChatWidget from './components/common/AIChatWidget';
+import CartDrawer from './components/common/CartDrawer';
+import MobileNav from './components/common/MobileNav';
+import './pages/MarketTheme.css';
 
 export default function App() {
   return (
     <>
       <Navbar />
-      <main>
+      <main className="app-main">
         <Routes>
           <Route path="/"                       element={<HomePage />} />
           <Route path="/products"               element={<ProductsPage />} />
@@ -37,7 +43,13 @@ export default function App() {
           <Route path="/cart"                   element={<CartPage />} />
           <Route path="/checkout"               element={<PrivateRoute><CheckoutPage /></PrivateRoute>} />
           <Route path="/payment-result"         element={<PaymentResultPage />} />
-          <Route path="/orders"                 element={<PrivateRoute><OrderTrackingPage /></PrivateRoute>} />
+          <Route path="/orders"                 element={<Navigate to="/account/orders" replace />} />
+          <Route path="/account"                element={<PrivateRoute><AccountHubPage /></PrivateRoute>}>
+            <Route index element={<ProfilePage embedded />} />
+            <Route path="orders" element={<OrderTrackingPage embedded />} />
+            <Route path="wishlist" element={<WishlistPage embedded />} />
+            <Route path="reviews" element={<MyReviewsPage embedded />} />
+          </Route>
           <Route path="/about"                  element={<AboutPage />} />
           <Route path="/contact"                element={<ContactPage />} />
           <Route path="/faq"                    element={<FAQPage />} />
@@ -48,11 +60,14 @@ export default function App() {
           <Route path="/terms"                  element={<HelpCategoryPage forcedCategory="terms" />} />
           <Route path="/login"                  element={<LoginPage />} />
           <Route path="/register"               element={<RegisterPage />} />
-          <Route path="/profile"                element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/profile"                element={<Navigate to="/account" replace />} />
+          <Route path="/wishlist"               element={<WishlistPage />} />
           <Route path="/admin/*"                element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="*"                       element={<NotFoundPage />} />
         </Routes>
       </main>
+      <CartDrawer />
+      <MobileNav />
       <Footer />
       <AIChatWidget />
     </>

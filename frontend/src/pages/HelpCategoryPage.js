@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import SEOHead from '../components/common/SEOHead';
+import './HelpCenterPage.css';
 
 const HELP_CONTENT = {
   'orders-and-tracking': {
@@ -82,7 +83,7 @@ export default function HelpCategoryPage({ forcedCategory }) {
   }
 
   return (
-    <>
+    <div>
       <SEOHead
         title={`${content.title} Help`}
         description={content.description}
@@ -90,21 +91,35 @@ export default function HelpCategoryPage({ forcedCategory }) {
         canonical={`https://www.gadgetglam.pk/help/${categoryKey}`}
       />
 
-      <div className="container" style={{ padding: '42px 0 84px' }}>
-        <Link to="/help" style={{ display: 'inline-block', marginBottom: '12px', color: 'var(--purple)', textDecoration: 'none', fontWeight: '700' }}>
-          ← Back to Help Center
+      <div className="container help-shell">
+        <Link to="/help" className="help-back">
+          <span>←</span> Back to Help Center
         </Link>
 
-        <article style={{ background: '#fff', border: '1.5px solid var(--gray-200)', borderRadius: '16px', padding: '22px' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '34px', marginBottom: '10px' }}>{content.title}</h1>
-          <p style={{ color: 'var(--gray-600)', marginBottom: '16px' }}>{content.description}</p>
-          <ul style={{ paddingLeft: '18px', margin: 0, color: 'var(--gray-700)', lineHeight: 1.75 }}>
-            {content.points.map((point) => (
-              <li key={point}>{point}</li>
-            ))}
-          </ul>
-        </article>
+        <div className="help-topic-wrap">
+          <article className="help-topic-card">
+            <h1 className="help-title" style={{ fontSize: '34px', marginBottom: '10px' }}>{content.title}</h1>
+            <p className="help-subtitle" style={{ marginBottom: '16px' }}>{content.description}</p>
+            <ul className="help-topic-list">
+              {content.points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+          </article>
+
+          <aside className="help-side-card">
+            <h2 className="help-side-title">Need More Help?</h2>
+            <p className="help-side-text">
+              Reach the right section quickly or talk to support if your issue is urgent.
+            </p>
+            <div className="help-side-links">
+              <Link to="/orders">Track My Order</Link>
+              <Link to="/faq">Frequently Asked Questions</Link>
+              <Link to="/contact">Contact Support</Link>
+            </div>
+          </aside>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

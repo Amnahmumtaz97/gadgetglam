@@ -10,6 +10,7 @@ export function CartProvider({ children }) {
     try { return JSON.parse(localStorage.getItem('gg_cart')) || []; }
     catch { return []; }
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [couponCode, setCouponCode] = useState(() => localStorage.getItem('gg_coupon_code') || '');
   const [couponDiscountPercent, setCouponDiscountPercent] = useState(() => Number(localStorage.getItem('gg_coupon_percent') || 0));
   const [lastCartActivity, setLastCartActivityState] = useState(() => getLastCartActivity());
@@ -65,6 +66,10 @@ export function CartProvider({ children }) {
     trackCartActivity();
   };
 
+  const openCart = () => setDrawerOpen(true);
+  const closeCart = () => setDrawerOpen(false);
+  const toggleCart = () => setDrawerOpen((prev) => !prev);
+
   const applyCoupon = (code) => {
     const normalized = String(code || '').trim().toUpperCase();
     if (!normalized) return false;
@@ -108,7 +113,11 @@ export function CartProvider({ children }) {
       discountedTotal,
       applyCoupon,
       clearCoupon,
-      lastCartActivity
+      lastCartActivity,
+      drawerOpen,
+      openCart,
+      closeCart,
+      toggleCart
     }}>
       {children}
     </CartContext.Provider>

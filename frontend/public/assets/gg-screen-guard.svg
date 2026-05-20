@@ -1,0 +1,39 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="700" rx="56" fill="#000000"/>
+  <circle cx="482" cy="350" r="270" fill="url(#glow)"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(290 78) rotate(13 160 270)">
+      <rect x="0" y="0" width="320" height="540" rx="46" fill="url(#glass)" stroke="url(#stroke)" stroke-width="5"/>
+      <rect x="32" y="42" width="256" height="456" rx="34" fill="#111111" fill-opacity=".26" stroke="#93C5FD" stroke-opacity=".45" stroke-width="3"/>
+      <path d="M62 132L250 78" stroke="#F8FAFC" stroke-opacity=".42" stroke-width="8" stroke-linecap="round"/>
+      <path d="M82 232L240 184" stroke="#F8FAFC" stroke-opacity=".22" stroke-width="6" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(380 98) rotate(13 160 270)">
+      <rect x="0" y="0" width="320" height="540" rx="46" fill="url(#glass2)" stroke="url(#stroke2)" stroke-width="5"/>
+      <rect x="32" y="42" width="256" height="456" rx="34" fill="#111111" fill-opacity=".18" stroke="#60A5FA" stroke-opacity=".48" stroke-width="3"/>
+      <path d="M72 150L248 98" stroke="#F8FAFC" stroke-opacity=".36" stroke-width="8" stroke-linecap="round"/>
+    </g>
+  </g>
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(482 350) rotate(90) scale(270)">
+      <stop stop-color="#1D4ED8" stop-opacity=".48"/>
+      <stop offset=".5" stop-color="#2563EB" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="320" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".24"/>
+      <stop offset=".52" stop-color="#60A5FA" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="glass2" x1="0" y1="0" x2="320" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5F3FF" stop-opacity=".28"/>
+      <stop offset=".55" stop-color="#93C5FD" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity=".18"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="320" y2="540" gradientUnits="userSpaceOnUse"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#2563EB"/></linearGradient>
+    <linearGradient id="stroke2" x1="0" y1="0" x2="320" y2="540" gradientUnits="userSpaceOnUse"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#2563EB"/></linearGradient>
+    <filter id="shadow" x="150" y="0" width="620" height="700" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="36" flood-color="#2563EB" flood-opacity=".36"/>
+    </filter>
+  </defs>
+</svg>

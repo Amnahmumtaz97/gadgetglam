@@ -77,6 +77,7 @@ async function runAutoTrackingTick() {
     if (nextStatus === 'Delivered') {
       updates.auto_tracking_enabled = false;
       updates.next_auto_status_at = null;
+      updates.payment_status = 'Paid';
     } else {
       updates.next_auto_status_at = new Date(now.getTime() + randomTrackingIntervalMs());
     }

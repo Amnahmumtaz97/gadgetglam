@@ -1,0 +1,36 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="700" rx="56" fill="#000000"/>
+  <circle cx="470" cy="350" r="260" fill="url(#glow)" opacity=".7"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(276 162) rotate(-18 174 174)">
+      <rect x="40" y="82" width="310" height="260" rx="52" fill="url(#body)" stroke="url(#stroke)" stroke-width="5"/>
+      <rect x="75" y="123" width="110" height="62" rx="18" fill="#0A0A0A" stroke="#60A5FA" stroke-width="4"/>
+      <rect x="209" y="122" width="86" height="62" rx="18" fill="#0A0A0A" stroke="#93C5FD" stroke-width="4"/>
+      <path d="M122 230H268" stroke="#2563EB" stroke-width="12" stroke-linecap="round"/>
+      <path d="M356 164H408" stroke="#2563EB" stroke-width="24" stroke-linecap="round"/>
+      <path d="M356 258H408" stroke="#2563EB" stroke-width="24" stroke-linecap="round"/>
+      <path d="M155 68C184 39 232 39 263 68" stroke="#2563EB" stroke-width="12" stroke-linecap="round"/>
+    </g>
+  </g>
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(468 346) rotate(90) scale(260)">
+      <stop stop-color="#2563EB" stop-opacity=".75"/>
+      <stop offset=".55" stop-color="#2563EB" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="47" y1="82" x2="350" y2="342" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A2A2A"/>
+      <stop offset=".42" stop-color="#111111"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="40" y1="82" x2="350" y2="342" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset=".5" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <filter id="shadow" x="144" y="34" width="630" height="572" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="34" flood-color="#2563EB" flood-opacity=".44"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#2563EB" flood-opacity=".35"/>
+    </filter>
+  </defs>
+</svg>

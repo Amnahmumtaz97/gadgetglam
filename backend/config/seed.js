@@ -1,28 +1,113 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+const dns = require('dns');
 const mongoose = require('mongoose');
+
+if (typeof process.env.MONGODB_URI === 'string' && process.env.MONGODB_URI.startsWith('mongodb+srv://')) {
+  try { dns.setServers(['1.1.1.1', '1.0.0.1', '8.8.8.8', '8.8.4.4']); } catch {}
+}
 const Product  = require('../models/Product');
+const { SHOP_CATEGORIES } = require('../constants/categories');
+const CURATED_CATALOG_EXTRA = require('./curatedCatalogExtra');
+const BUNDLE_CATALOG = require('./bundleCatalog');
 const User     = require('../models/User');
 const { Order, Review } = require('../models/OrderReview');
+const UserBehavior = require('../models/UserBehavior');
 
 // ── PRODUCT GENERATION FUNCTION ────────────────────────────────────────────────
 function generateProducts(count = 100) {
-  const categories = ['Cases', 'Chargers', 'Cables', 'Earphones', 'Screen Guards', 'Bundles'];
+  const categories = SHOP_CATEGORIES.filter((c) => c !== 'Bundles');
   const brands = ['LuxeCase', 'PowerPro', 'TechLink', 'SoundPro', 'GlassGuard', 'GadgetGlam', 'ClearShield', 'ArmorMax', 'MatteMax', 'RingCase'];
   const devices = ['iPhone 15', 'iPhone 14', 'Samsung Galaxy S24', 'Samsung Galaxy A54', 'Universal'];
-  const imageUrls = [
-    'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&q=80',
-    'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400&q=80',
-    'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=400&q=80',
-    'https://images.unsplash.com/photo-1512054502232-10a0a035d672?w=400&q=80',
-    'https://images.unsplash.com/photo-1609096458733-95b38583ac4e?w=400&q=80',
-    'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
-  ];
+
+  const categoryImageBank = {
+    Cases: [
+      'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1556656793-08538906a9f8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1512054502232-10a0a035d672?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Chargers: [
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Cables: [
+      'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Earphones: [
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?auto=format&fit=crop&w=1200&q=80',
+    ],
+    'Screen Guards': [
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1556656793-08538906a9f8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Bundles: [
+      'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80',
+    ],
+    'Smart Watches': [
+      'https://images.unsplash.com/photo-1523275335684-378980b3693b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1544112474-2cdc81a5c677?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1522312340185-e585b57a0bb6?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Speakers: [
+      'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1545454679-3531b543cbeb?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Headphones: [
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?auto=format&fit=crop&w=1200&q=80',
+    ],
+    'Power Banks': [
+      'https://images.unsplash.com/photo-1609096458733-95b38583ac4e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=1200&q=80',
+    ],
+    Other: [
+      'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1556656793-08538906a9f8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80',
+    ],
+  };
+
+  const getCategoryImageSet = (category, index) => {
+    const bank = categoryImageBank[category] || categoryImageBank.Other;
+    const len = bank.length;
+    return {
+      thumbnail: bank[index % len],
+      images: [
+        bank[(index + 1) % len],
+        bank[(index + 2) % len],
+        bank[(index + 3) % len],
+      ],
+    };
+  };
   
   const products = [];
   for (let i = 0; i < count; i++) {
     const category = categories[i % categories.length];
     const price = Math.floor(Math.random() * 7000) + 500;
     const compare_price = Math.floor(price * (1 + Math.random() * 0.5));
+    const imageSet = getCategoryImageSet(category, i + 1);
     
     products.push({
       name: `${category} Item #${i + 1} - Premium ${brands[i % brands.length]} Product`,
@@ -34,8 +119,8 @@ function generateProducts(count = 100) {
       category,
       device_compatibility: [devices[i % devices.length]],
       tags: [category.toLowerCase(), 'premium', 'quality', `item-${i + 1}`],
-      thumbnail: imageUrls[i % imageUrls.length],
-      images: [imageUrls[i % imageUrls.length]],
+      thumbnail: imageSet.thumbnail,
+      images: imageSet.images,
       affiliate_link: 'https://www.daraz.pk',
       affiliate_platform: 'Daraz',
       ratings_avg: Math.min(5, Math.random() * 1.2 + 3.8),
@@ -68,10 +153,22 @@ function generateUsers(count = 100) {
   return users;
 }
 
-// ── PRODUCTS (Old static array kept for reference) ────────────────────────────────────────────────────────────────────
-const products = [
+// ── CURATED PRODUCTS (realistic catalog + analytics-friendly names) ───────────
+const CURATED_PRODUCTS = [
 
   // ── Cases (10) ─────────────────────────────────────────
+  {
+    name: 'MagSafe Case Pro',
+    description: 'Premium MagSafe-compatible case with reinforced corners and microfiber lining. Snaps on instantly and supports wireless charging.',
+    short_description: 'MagSafe Case Pro with reinforced protection.',
+    price: 5999, compare_price: 7999, brand: 'MagClear',
+    category: 'Cases', device_compatibility: ['iPhone 15 Pro', 'iPhone 15 Pro Max'],
+    tags: ['magsafe', 'case', 'iphone', 'pro'],
+    thumbnail: 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1556656793-08538906a9f8?w=800&q=80'],
+    affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
+    ratings_avg: 4.8, reviews_count: 210, is_featured: true, stock_status: 'Limited',
+  },
   {
     name: 'Premium Leather Wallet Case for iPhone 15 Pro',
 
@@ -202,8 +299,8 @@ const products = [
     price: 3299, compare_price: 4500, brand: 'PowerPro',
     category: 'Chargers', device_compatibility: ['Universal'],
     tags: ['gan', 'fast charger', '65w', 'usb-c', 'laptop'],
-    thumbnail: 'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80'],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.9, reviews_count: 342, is_featured: true, stock_status: 'In Stock',
   },
@@ -226,8 +323,8 @@ const products = [
     price: 2199, compare_price: 3000, brand: 'MagCharge',
     category: 'Chargers', device_compatibility: ['iPhone 12', 'iPhone 13', 'iPhone 14', 'iPhone 15'],
     tags: ['magsafe', 'wireless', '15w', 'iphone', 'magnetic'],
-    thumbnail: 'https://images.unsplash.com/photo-1614438945823-f78d7af1dd82?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1614438945823-f78d7af1dd82?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&q=80'],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.5, reviews_count: 156, is_featured: true, stock_status: 'In Stock',
   },
@@ -238,8 +335,8 @@ const products = [
     price: 1799, compare_price: 2400, brand: 'SuperCharge',
     category: 'Chargers', device_compatibility: ['Samsung Galaxy S24', 'Samsung Galaxy S23', 'Samsung Galaxy A54'],
     tags: ['25w', 'samsung', 'super fast', 'usb-c'],
-    thumbnail: 'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80'],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.7, reviews_count: 224, is_featured: false, stock_status: 'In Stock',
   },
@@ -250,8 +347,8 @@ const products = [
     price: 3499, compare_price: 4800, brand: 'PowerBank Pro',
     category: 'Chargers', device_compatibility: ['Universal'],
     tags: ['power bank', '10000mah', 'portable', 'fast charge'],
-    thumbnail: 'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80'],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.6, reviews_count: 311, is_featured: true, stock_status: 'In Stock',
   },
@@ -262,8 +359,8 @@ const products = [
     price: 4299, compare_price: 6000, brand: 'TriCharge',
     category: 'Chargers', device_compatibility: ['iPhone', 'Apple Watch', 'AirPods'],
     tags: ['wireless', '3-in-1', 'qi', 'apple watch', 'airpods'],
-    thumbnail: 'https://images.unsplash.com/photo-1614438945823-f78d7af1dd82?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1614438945823-f78d7af1dd82?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&q=80'],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.8, reviews_count: 98, is_featured: true, stock_status: 'In Stock',
   },
@@ -286,8 +383,8 @@ const products = [
     price: 3999, compare_price: 5500, brand: 'HyperCharge',
     category: 'Chargers', device_compatibility: ['Universal USB-C'],
     tags: ['120w', 'hyper charge', 'fast', 'usb-c', 'vooc'],
-    thumbnail: 'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&q=80',
+    images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80'],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.7, reviews_count: 187, is_featured: false, stock_status: 'In Stock',
   },
@@ -312,8 +409,11 @@ const products = [
     price: 799, compare_price: 1200, brand: 'UniCable',
     category: 'Cables', device_compatibility: ['Universal'],
     tags: ['3-in-1', 'universal', 'lightning', 'micro-usb', 'usb-c'],
-    thumbnail: 'https://images.unsplash.com/photo-1601504658430-97b3d76d5a48?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1601504658430-97b3d76d5a48?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=900&q=82',
+    images: [
+      'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
+    ],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.2, reviews_count: 93, is_featured: false, stock_status: 'In Stock',
   },
@@ -336,8 +436,11 @@ const products = [
     price: 899, compare_price: 1300, brand: 'KeyCable',
     category: 'Cables', device_compatibility: ['Universal'],
     tags: ['retractable', 'keychain', 'travel', '3-in-1', 'portable'],
-    thumbnail: 'https://images.unsplash.com/photo-1601504658430-97b3d76d5a48?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1601504658430-97b3d76d5a48?w=800&q=80'],
+    thumbnail: 'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=82',
+    images: [
+      'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=1200&q=80',
+    ],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.3, reviews_count: 112, is_featured: false, stock_status: 'In Stock',
   },
@@ -448,8 +551,11 @@ const products = [
     price: 599, compare_price: 900, brand: 'GlassGuard',
     category: 'Screen Guards', device_compatibility: ['iPhone 15'],
     tags: ['tempered glass', '9h', 'iphone', 'screen protector'],
-    thumbnail: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&q=80'],
+    thumbnail: '/assets/gg-screen-guard.svg',
+    images: [
+      '/assets/gg-screen-guard.svg',
+      'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80',
+    ],
     affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
     ratings_avg: 4.5, reviews_count: 234, is_featured: false, stock_status: 'In Stock',
   },
@@ -514,59 +620,23 @@ const products = [
     ratings_avg: 4.6, reviews_count: 131, is_featured: true, stock_status: 'In Stock',
   },
 
-  // ── Bundles (4) ────────────────────────────────────────
-  {
-    name: 'Ultimate iPhone 15 Starter Pack',
-    description: 'Everything you need for your new iPhone 15: Premium leather case + 20W charger + USB-C cable + tempered glass screen protector. Save 30% vs buying separately.',
-    short_description: 'Complete 4-in-1 starter bundle for iPhone 15.',
-    price: 4999, compare_price: 7200, brand: 'GadgetGlam',
-    category: 'Bundles', device_compatibility: ['iPhone 15'],
-    tags: ['bundle', 'iphone', 'starter pack', 'value', 'combo'],
-    thumbnail: 'https://images.unsplash.com/photo-1512054502232-10a0a035d672?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1512054502232-10a0a035d672?w=800&q=80'],
-    affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
-    ratings_avg: 4.9, reviews_count: 54, is_featured: true, stock_status: 'In Stock',
-  },
-  {
-    name: 'Samsung Galaxy Accessories Mega Bundle',
-    description: 'Complete accessories bundle for Samsung Galaxy users. Includes clear case, 25W fast charger, braided USB-C cable, and privacy screen guard. Best value deal.',
-    short_description: 'Complete 4-in-1 accessories bundle for Samsung Galaxy.',
-    price: 3999, compare_price: 5800, brand: 'GadgetGlam',
-    category: 'Bundles', device_compatibility: ['Samsung Galaxy S24', 'Samsung Galaxy A54'],
-    tags: ['bundle', 'samsung', 'combo', 'value', 'charger'],
-    thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80'],
-    affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
-    ratings_avg: 4.7, reviews_count: 41, is_featured: true, stock_status: 'In Stock',
-  },
-  {
-    name: 'GadgetGlam Travel Kit',
-    description: 'The perfect travel kit: 65W GaN charger + 3-in-1 cable + 10000mAh power bank + carry pouch. Covers all your charging needs on the road. Save 25%.',
-    short_description: 'Travel charging kit: GaN charger + cable + power bank.',
-    price: 6999, compare_price: 9500, brand: 'GadgetGlam',
-    category: 'Bundles', device_compatibility: ['Universal'],
-    tags: ['travel', 'bundle', 'power bank', 'gan', 'charger', 'cable'],
-    thumbnail: 'https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1609592806596-b452e069e3bc?w=800&q=80'],
-    affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
-    ratings_avg: 4.8, reviews_count: 29, is_featured: true, stock_status: 'In Stock',
-  },
-  {
-    name: 'Audio Lover Bundle — Earbuds + Wireless Pad',
-    description: 'Perfect combo for music lovers: Pro Wireless ANC Earbuds + 3-in-1 Wireless Charging Pad. Enjoy cable-free audio and cable-free charging. Save 20%.',
-    short_description: 'ANC earbuds + 3-in-1 wireless charging pad bundle.',
-    price: 8999, compare_price: 11500, brand: 'GadgetGlam',
-    category: 'Bundles', device_compatibility: ['Universal'],
-    tags: ['audio', 'bundle', 'earbuds', 'wireless charging', 'combo'],
-    thumbnail: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&q=80',
-    images: ['https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&q=80'],
-    affiliate_link: 'https://www.daraz.pk', affiliate_platform: 'Daraz',
-    ratings_avg: 4.9, reviews_count: 18, is_featured: true, stock_status: 'In Stock',
-  },
+  ...BUNDLE_CATALOG.map((b) => ({
+    ...b,
+    affiliate_link: 'https://www.daraz.pk',
+    affiliate_platform: 'Daraz',
+  })),
+  ...CURATED_CATALOG_EXTRA,
 ];
 
-// ── USERS (will be generated) ──────────────────────────────────────────────────
-// Using generator function below
+const CATALOG_TARGET = 180;
+
+const {
+  enrichProductsForAnalytics,
+  seedHistoricalOrders,
+  seedHistoricalReviews,
+  seedUserBehaviors,
+  seedFilterCoverageOrders,
+} = require('./seedAnalyticsLib');
 
 // ── SEED FUNCTION ──────────────────────────────────────────────────────────
 async function seed() {
@@ -578,17 +648,56 @@ async function seed() {
     await User.deleteMany({});
     await Order.deleteMany({});
     await Review.deleteMany({});
+    await UserBehavior.deleteMany({});
     console.log('🗑️  Cleared existing data');
 
-    // Generate and insert 100 products
-    console.log('📦 Generating 100 products...');
-    const generatedProducts = generateProducts(100);
+    const generatedCount = Math.max(0, CATALOG_TARGET - CURATED_PRODUCTS.length);
+    console.log(`📦 Inserting ${CURATED_PRODUCTS.length} curated + ${generatedCount} generated products...`);
+    const catalog = [
+      ...CURATED_PRODUCTS.map(p => ({ ...p, is_active: true, is_draft: false })),
+      ...generateProducts(generatedCount),
+    ];
     const savedProducts = [];
-    for (const p of generatedProducts) {
+    for (const p of catalog) {
       const saved = await new Product(p).save();
       savedProducts.push(saved);
     }
     console.log(`✅ Inserted ${savedProducts.length} products`);
+
+    console.log('📊 Enriching products (views, stock signals)...');
+    await enrichProductsForAnalytics(savedProducts);
+
+    const dealConfigs = [
+      { days: 7, stock: 39 },
+      { days: 5, stock: 52 },
+      { days: 10, stock: 18 },
+      { days: 3, stock: 74 },
+      { days: 14, stock: 25 },
+    ];
+    const dealCandidates = savedProducts.slice().sort((a, b) => (b.is_featured - a.is_featured));
+    for (let i = 0; i < Math.min(dealCandidates.length, dealConfigs.length); i++) {
+      const cfg = dealConfigs[i];
+      const ends = new Date();
+      ends.setDate(ends.getDate() + cfg.days);
+      const total = cfg.stock + 25;
+      dealCandidates[i].is_deal = true;
+      dealCandidates[i].deal_ends_at = ends;
+      dealCandidates[i].deal_stock_total = total;
+      dealCandidates[i].deal_stock_remaining = cfg.stock;
+      dealCandidates[i].deal_sort_order = i;
+      if (!dealCandidates[i].compare_price) {
+        dealCandidates[i].compare_price = Math.round(dealCandidates[i].price * 1.3);
+      }
+      await Product.findByIdAndUpdate(dealCandidates[i]._id, {
+        is_deal: true,
+        deal_ends_at: ends,
+        deal_stock_total: total,
+        deal_stock_remaining: cfg.stock,
+        deal_sort_order: i,
+        compare_price: dealCandidates[i].compare_price,
+      });
+    }
+    console.log(`🏷️  Applied ${Math.min(dealCandidates.length, dealConfigs.length)} weekly deals`);
 
     // Generate and insert 100 users
     console.log('👤 Generating 100 users...');
@@ -602,104 +711,45 @@ async function seed() {
 
     const normalUsers = savedUsers.slice(1); // exclude admin
 
-    // ── GENERATE 100 ORDERS ───────────────────────────────────────────────────
-    console.log('🛒 Generating 100 orders...');
-    const paymentMethods = ['COD', 'JazzCash', 'EasyPaisa'];
-    const paymentStatuses = ['Paid', 'Unpaid'];
-    const orderStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-    const cities = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Hyderabad', 'Peshawar'];
-    const streets = ['Main Street', 'Market Road', 'DHA Phase', 'Gulshan Block', 'Model Town', 'Clifton', 'F-Block', 'Johar Town'];
-    
-    const savedOrders = [];
-    for (let i = 0; i < 100; i++) {
-      const numProducts = Math.floor(Math.random() * 3) + 1;
-      const orderProducts = [];
-      let totalPrice = 0;
+    console.log('🛒 Generating historical orders (365-day spread)...');
+    const savedOrders = await seedHistoricalOrders({
+      savedProducts,
+      normalUsers,
+      count: 480,
+      daysBack: 365,
+    });
+    const coverageOrders = await seedFilterCoverageOrders({
+      savedProducts,
+      normalUsers,
+      daysBack: 365,
+    });
+    console.log(`✅ Inserted ${savedOrders.length} orders (+${coverageOrders} filter-coverage orders)`);
 
-      for (let j = 0; j < numProducts; j++) {
-        const p = savedProducts[Math.floor(Math.random() * savedProducts.length)];
-        const qty = Math.floor(Math.random() * 3) + 1;
-        const price = p.price;
-        orderProducts.push({
-          product_id: p._id,
-          name: p.name,
-          thumbnail: p.thumbnail,
-          quantity: qty,
-          price: price,
-          affiliate_link: p.affiliate_link,
-        });
-        totalPrice += price * qty;
-      }
-
-      const order = await new Order({
-        user_id: normalUsers[Math.floor(Math.random() * normalUsers.length)]._id,
-        products: orderProducts,
-        total_price: totalPrice,
-        payment_method: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
-        payment_status: paymentStatuses[Math.floor(Math.random() * paymentStatuses.length)],
-        order_status: orderStatuses[Math.floor(Math.random() * orderStatuses.length)],
-        tracking_number: `TCS-${Date.now()}-${i}`,
-        shipping_address: {
-          street: `${Math.floor(Math.random() * 100)} ${streets[Math.floor(Math.random() * streets.length)]}`,
-          city: cities[Math.floor(Math.random() * cities.length)],
-          zip: String(Math.floor(Math.random() * 90000) + 10000),
-          country: 'Pakistan',
-        },
-      }).save();
-      savedOrders.push(order);
-    }
-    console.log(`✅ Inserted ${savedOrders.length} orders`);
-
-    // ── GENERATE 100 REVIEWS ───────────────────────────────────────────────────
-    console.log('⭐ Generating 100 reviews...');
-    const reviewTexts = [
-      'Excellent quality and fast delivery!',
-      'Very satisfied with this product.',
-      'Value for money, highly recommend.',
-      'Great product, exceeded expectations.',
-      'Amazing quality, will buy again.',
-      'Perfect for my needs.',
-      'Good product at reasonable price.',
-      'Fantastic experience overall.',
-      'Highly impressed with quality.',
-      'Best purchase I have made.',
-      'Not as expected but still good.',
-      'Average quality but decent price.',
-      'Works well for the price.',
-      'Would recommend to friends.',
-      'Great customer service.',
-      'Fast and reliable delivery.',
-      'Quality is outstanding.',
-      'Perfect match for my needs.',
-      'Absolutely worth buying.',
-      'Love it! Great quality.',
-    ];
-
-    let reviewCount = 0;
-    for (let i = 0; i < 100; i++) {
-      const product = savedProducts[Math.floor(Math.random() * savedProducts.length)];
-      const user = normalUsers[Math.floor(Math.random() * normalUsers.length)];
-      const rating = Math.floor(Math.random() * 5) + 1;
-
-      await new Review({
-        product_id: product._id,
-        user_id: user._id,
-        rating: rating,
-        title: `Review #${i + 1}`,
-        review_text: reviewTexts[Math.floor(Math.random() * reviewTexts.length)],
-        is_verified: Math.random() > 0.3,
-        helpful_votes: Math.floor(Math.random() * 50),
-      }).save();
-      reviewCount++;
-    }
+    console.log('⭐ Generating historical reviews...');
+    const reviewCount = await seedHistoricalReviews({
+      savedProducts,
+      normalUsers,
+      count: 220,
+      daysBack: 365,
+    });
     console.log(`✅ Inserted ${reviewCount} reviews`);
+
+    console.log('🧠 Generating user behavior for analytics...');
+    const behaviorCount = await seedUserBehaviors({
+      normalUsers,
+      savedProducts,
+      count: 130,
+      daysBack: 90,
+    });
+    console.log(`✅ Inserted ${behaviorCount} behavior records`);
 
     console.log('\n✅ Seed complete!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`📦 Products : ${savedProducts.length}`);
-    console.log(`👤 Users    : ${savedUsers.length}  (1 admin + ${savedUsers.length - 1} customers)`);
-    console.log(`🛒 Orders   : ${savedOrders.length}`);
-    console.log(`⭐ Reviews  : ${reviewCount}`);
+    console.log(`📦 Products  : ${savedProducts.length} (curated + generated)`);
+    console.log(`👤 Users     : ${savedUsers.length}  (1 admin + ${savedUsers.length - 1} customers)`);
+    console.log(`🛒 Orders    : ${savedOrders.length} (spread over 90 days)`);
+    console.log(`⭐ Reviews   : ${reviewCount}`);
+    console.log(`🧠 Behaviors : ${behaviorCount}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔐 Admin → admin@gadgetglam.pk / admin123');
     console.log('🔐 User  → user1@example.com    / user1234');
@@ -713,5 +763,7 @@ async function seed() {
   }
 }
 
-seed();
+if (require.main === module) {
+  seed();
+}
 
