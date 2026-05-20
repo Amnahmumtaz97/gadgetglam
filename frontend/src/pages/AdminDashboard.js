@@ -1358,6 +1358,8 @@ function ChartTooltip({ active, payload, label, currency }) {
 }
 
 function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdForm, savingProd, generatingAI, onAdd, onEdit, onDelete, onPublish, onSave, onGenerateAI, setProducts, setEditProduct, setShowProdForm, setGeneratingAI, onCancel, onView, generationSource, setGenerationSource, onRegenerate }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewProduct, setPreviewProduct] = useState(null);
   const f = (field) => (e) => setProdForm(p => ({ ...p, [field]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
   const onCategoryChange = (category) => {
     setProdForm((p) => {
@@ -1556,7 +1558,7 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
               footer={previewProduct && (
                 <>
                   {editProduct?._id ? (
-                    <button type="button" className="btn-gradient rounded-xl px-4 py-2 text-sm font-semibold" onClick={() => { publishProduct(editProduct); setPreviewOpen(false); }}>
+                    <button type="button" className="btn-gradient rounded-xl px-4 py-2 text-sm font-semibold" onClick={() => { onPublish(editProduct); setPreviewOpen(false); }}>
                       Publish
                     </button>
                   ) : (

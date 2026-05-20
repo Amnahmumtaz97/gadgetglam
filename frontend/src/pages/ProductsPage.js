@@ -116,12 +116,9 @@ export default function ProductsPage() {
       />
 
       <div className="container page-shell">
-        <div className="mb-8 overflow-hidden rounded-4xl border border-theme bg-theme-panel p-6 shadow-card md:p-8">
+        <div className="mb-8 overflow-visible rounded-4xl border border-theme bg-theme-panel p-6 shadow-card md:p-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="mb-3 inline-flex items-center gap-2 rounded-full badge-accent px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em]">
-                <Search size={13} /> Store console
-              </p>
               <h1 className="text-4xl font-black tracking-tight text-theme md:text-5xl">{title}</h1>
               <p className="mt-3 text-sm text-theme-muted">{pagination.total || products.length} premium products matched your current filters.</p>
             </div>

@@ -91,7 +91,7 @@ export default function SelectMenu({
           role="listbox"
           aria-label={ariaLabel}
           className={cn(
-            'select-menu-panel absolute z-[120] mt-2 max-h-72 min-w-full overflow-auto rounded-2xl border border-theme bg-[var(--panel-strong)] p-1.5 shadow-[var(--shadow-lg)]',
+            'select-menu-panel absolute z-[320] mt-2 max-h-72 min-w-full overflow-auto rounded-2xl border border-theme bg-[var(--panel-strong)] p-1.5 shadow-[var(--shadow-lg)]',
             align === 'right' ? 'right-0' : 'left-0',
             'select-menu-panel',
             menuClassName,
