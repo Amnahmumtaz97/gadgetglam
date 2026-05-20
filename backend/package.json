@@ -12,6 +12,7 @@
     "refresh-images": "node config/refreshProductImages.js",
     "fix-broken-images": "node config/fixBrokenProductImages.js",
     "backfill:ai-products": "node config/backfillAIGeneratedProducts.js",
+    "backfill:reviews": "node config/backfillSeededReviews.js",
     "add-catalog-extra": "node config/addCatalogExtra.js",
     "sync-bundles": "node config/syncBundles.js"
   },
