@@ -11,6 +11,7 @@
     "seed:analytics:rich": "node config/seedAnalytics.js",
     "refresh-images": "node config/refreshProductImages.js",
     "fix-broken-images": "node config/fixBrokenProductImages.js",
+    "backfill:ai-products": "node config/backfillAIGeneratedProducts.js",
     "add-catalog-extra": "node config/addCatalogExtra.js",
     "sync-bundles": "node config/syncBundles.js"
   },

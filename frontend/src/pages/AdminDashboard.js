@@ -1395,16 +1395,13 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
                 size="sm"
                 className="min-w-[220px]"
                 options={[
-                  { value: 'both', label: 'Both (title + description)' },
-                  { value: 'title', label: 'Title only' },
+                  { value: 'both', label: 'Name + description' },
+                  { value: 'title', label: 'Name only' },
                   { value: 'description', label: 'Description only' },
                 ]}
                 aria-label="AI generation source"
               />
             </div>
-            <button type="button" onClick={onGenerateAI} disabled={generatingAI} className="rounded-2xl px-4 py-2 text-sm font-semibold btn-primary">
-              {generatingAI ? 'Generating AI Draft…' : 'Generate AI Content'}
-            </button>
             <button type="button" onClick={async () => {
               if (!prodForm.name.trim() && !prodForm.description.trim()) {
                 toast.error('Enter a title or description first.');
@@ -1415,7 +1412,8 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
                 const { data } = await axios.post('/api/admin/products/generate-and-save', {
                   title: prodForm.name,
                   description: prodForm.description,
-                  source: generationSource
+                  source: generationSource,
+                  form: prodForm,
                 });
                 const created = data.product;
                 if (created) {
@@ -1452,7 +1450,9 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
               } finally {
                 setGeneratingAI(false);
               }
-            }} className="rounded-2xl px-4 py-2 text-sm font-semibold btn-primary">Generate & Save Draft</button>
+            }} className="rounded-2xl px-4 py-2 text-sm font-semibold btn-primary">
+              {generatingAI ? 'Generating AI content…' : 'Generate AI content'}
+            </button>
             {editProduct?.isAIGenerated && (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button type="button" onClick={() => onRegenerate(editProduct._id, ['title'])} className="rounded-xl px-3 py-2 text-sm border border-theme text-theme">Regenerate Title</button>
@@ -1525,7 +1525,7 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
               <input type="checkbox" checked={prodForm.is_featured} onChange={f('is_featured')} /> Featured Product
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', margin: '0 0 20px', cursor: 'pointer' }}>
-              <input type="checkbox" checked={prodForm.is_draft} onChange={f('is_draft')} /> Save as Draft (hidden from customers)
+              <input type="checkbox" checked={prodForm.is_draft} onChange={f('is_draft')} /> Save as Draft
             </label>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button type="button" onClick={() => {

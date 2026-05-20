@@ -112,6 +112,138 @@ function buildDraftFromInput({ title, description }) {
   };
 }
 
+function slugifyForUrl(value = '') {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 120);
+}
+
+function splitList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  return String(value || '')
+    .split(',')
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+}
+
+function inferBrand(text = '', category = '') {
+  const combined = `${text} ${category}`.toLowerCase();
+  if (/glassguard|screen guard|protector/.test(combined)) return 'GlassGuard';
+  if (/armormax|armor|rugged/.test(combined)) return 'ArmorMax';
+  if (/clearshield|clear/.test(combined)) return 'ClearShield';
+  if (/magsafe|mag/.test(combined)) return 'MagClear';
+  if (/leather|wallet/.test(combined)) return 'LuxeCase';
+  if (/charger|power/.test(combined)) return 'PowerPro';
+  if (/speaker|audio|headphone|earbud|earphone/.test(combined)) return 'SoundPro';
+  return 'GadgetGlam';
+}
+
+function inferCompatibility(text = '') {
+  const combined = String(text || '').toLowerCase();
+  if (/iphone 15 pro max/.test(combined)) return ['iPhone 15 Pro Max'];
+  if (/iphone 15 pro/.test(combined)) return ['iPhone 15 Pro'];
+  if (/iphone 15/.test(combined)) return ['iPhone 15'];
+  if (/iphone 14 pro max/.test(combined)) return ['iPhone 14 Pro Max'];
+  if (/iphone 14/.test(combined)) return ['iPhone 14'];
+  if (/samsung galaxy s24/.test(combined)) return ['Samsung Galaxy S24'];
+  if (/samsung galaxy a54/.test(combined)) return ['Samsung Galaxy A54'];
+  if (/samsung galaxy a34/.test(combined)) return ['Samsung Galaxy A34'];
+  return ['Universal'];
+}
+
+function estimatePrice({ title = '', description = '', category = '', price, compare_price }) {
+  const numericPrice = Number(price);
+  if (Number.isFinite(numericPrice) && numericPrice > 0) return numericPrice;
+
+  const combined = `${title} ${description}`.toLowerCase();
+  if (/bundle|kit|combo/.test(combined)) return 2999;
+  if (/watch|smart watch|smartwatch/.test(combined)) return 7499;
+  if (/speaker|headphone|earbud|earphone/.test(combined)) return 3999;
+  if (/charger|adapter|power bank/.test(combined)) return 1899;
+  if (/case|cover|screen guard|protector/.test(combined)) return 999;
+  if (/cable/.test(combined)) return 699;
+  if (category === 'Bundles') return 2999;
+
+  const numericCompare = Number(compare_price);
+  if (Number.isFinite(numericCompare) && numericCompare > 0) return Math.max(499, Math.round(numericCompare / 1.25));
+  return 1499;
+}
+
+function makeAiImageSet(title = '', category = 'Other') {
+  const query = [title, category, 'mobile accessory', 'product photography']
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join(',');
+  const base = `https://source.unsplash.com/1200x900/?${encodeURIComponent(query)}`;
+  return {
+    thumbnail: `${base}&sig=1`,
+    images: [`${base}&sig=2`, `${base}&sig=3`, `${base}&sig=4`],
+  };
+}
+
+function normalizeAiProductDraft(input = {}, draft = {}) {
+  const title = String(input.title || draft.name || '').trim();
+  const description = String(input.description || draft.description || '').trim();
+  const category = CATEGORIES.includes(String(input.category || draft.category || ''))
+    ? String(input.category || draft.category)
+    : draft.category || 'Other';
+  const imageSet = makeAiImageSet(title || draft.name, category);
+  const draftPrice = estimatePrice({
+    title,
+    description,
+    category,
+    price: input.price ?? draft.price,
+    compare_price: input.compare_price ?? draft.compare_price,
+  });
+  const manualImages = splitList(input.images);
+  const manualCompat = splitList(input.device_compatibility);
+  const manualTags = splitList(input.tags);
+  const manualSeoKeywords = splitList(input.seo_meta_keywords || input?.seo?.meta_keywords);
+  const manualCanonicalUrl = String(input.seo_canonical_url || input?.seo?.canonical_url || '').trim();
+  const manualOgImage = String(input.seo_og_image || input?.seo?.og_image || '').trim();
+  const slug = slugifyForUrl(title || draft.name || 'product-draft');
+
+  const tags = Array.from(new Set([
+    ...manualTags,
+    ...(draft.tags || []),
+    category.toLowerCase(),
+    inferBrand(`${title} ${description}`, category).toLowerCase(),
+  ].filter(Boolean))).slice(0, 10);
+
+  const comparePrice = Number(input.compare_price ?? draft.compare_price);
+
+  return {
+    name: title || draft.name || 'Product Draft',
+    description: description || draft.description || '',
+    short_description: String(input.short_description || draft.short_description || '').trim(),
+    price: draftPrice,
+    compare_price: Number.isFinite(comparePrice) && comparePrice > draftPrice ? comparePrice : Math.max(draftPrice + Math.round(draftPrice * 0.25), draftPrice + 200),
+    brand: String(input.brand || draft.brand || inferBrand(`${title} ${description}`, category)).trim(),
+    category,
+    stock_status: ['In Stock', 'Limited', 'Out of Stock'].includes(String(input.stock_status || draft.stock_status || ''))
+      ? String(input.stock_status || draft.stock_status)
+      : 'In Stock',
+    thumbnail: String(input.thumbnail || draft.thumbnail || imageSet.thumbnail).trim(),
+    images: manualImages.length ? manualImages : (draft.images && draft.images.length ? draft.images : imageSet.images),
+    affiliate_link: String(input.affiliate_link || draft.affiliate_link || 'https://www.daraz.pk').trim() || 'https://www.daraz.pk',
+    affiliate_platform: String(input.affiliate_platform || draft.affiliate_platform || 'Daraz').trim() || 'Daraz',
+    device_compatibility: manualCompat.length ? manualCompat : (draft.device_compatibility && draft.device_compatibility.length ? draft.device_compatibility : inferCompatibility(`${title} ${description}`)),
+    tags,
+    is_featured: Boolean(input.is_featured ?? draft.is_featured ?? false),
+    is_draft: true,
+    seo: {
+      meta_title: String(input.seo_meta_title || draft?.seo?.meta_title || `${title || draft.name || 'Product'} | GadgetGlam`).trim().slice(0, 70),
+      meta_description: String(input.seo_meta_description || draft?.seo?.meta_description || draft.short_description || description || '').trim().slice(0, 160),
+      meta_keywords: manualSeoKeywords.length ? manualSeoKeywords : (draft?.seo?.meta_keywords || tags).slice(0, 12),
+      canonical_url: manualCanonicalUrl || `https://gadgetglam.pk/products/${slug}`,
+      og_image: manualOgImage || String(input.thumbnail || draft.thumbnail || imageSet.thumbnail).trim(),
+      schema_type: 'Product',
+    }
+  };
+}
+
 function detectGenerationMode({ title, description }) {
   const hasTitle = Boolean(String(title || '').trim());
   const hasDescription = Boolean(String(description || '').trim());
@@ -139,7 +271,7 @@ function getPublishMissingFields(product = {}) {
 }
 
 async function generateAdminProductDraft(input = {}) {
-  const fallback = buildDraftFromInput(input);
+  const fallback = normalizeAiProductDraft(input, buildDraftFromInput(input));
   const ai = resolveAIProvider();
   if (!ai) return fallback;
   const mode = input.modeOverride || detectGenerationMode(input);
@@ -162,12 +294,27 @@ async function generateAdminProductDraft(input = {}) {
       descriptionParagraphs: 2,
       maxTags: 10,
       mustReturnJsonOnly: true,
-      requiredKeys: ['name', 'category', 'short_description', 'description', 'tags', 'seo'],
-      seoKeys: ['meta_title', 'meta_description', 'meta_keywords'],
+      requiredKeys: ['name', 'category', 'short_description', 'description', 'tags', 'seo', 'thumbnail', 'images', 'brand', 'affiliate_link', 'affiliate_platform', 'device_compatibility', 'price', 'compare_price', 'stock_status'],
+      seoKeys: ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'og_image'],
       preserveInputMeaning: true,
       categoryEnum: CATEGORIES
     },
-    productInput: { title: input.title || '', description: input.description || '' }
+    productInput: {
+      title: input.title || '',
+      description: input.description || '',
+      price: input.price ?? '',
+      compare_price: input.compare_price ?? '',
+      brand: input.brand || '',
+      category: input.category || '',
+      stock_status: input.stock_status || '',
+      affiliate_link: input.affiliate_link || '',
+      affiliate_platform: input.affiliate_platform || '',
+      thumbnail: input.thumbnail || '',
+      images: input.images || '',
+      device_compatibility: input.device_compatibility || '',
+      tags: input.tags || '',
+      is_featured: input.is_featured || false,
+    }
   };
 
   try {
@@ -208,6 +355,17 @@ async function generateAdminProductDraft(input = {}) {
       category: CATEGORIES.includes(String(parsed.category || '').trim()) ? String(parsed.category).trim() : fallback.category,
       short_description: String(parsed.short_description || fallback.short_description).trim().slice(0, 300),
       description: String(parsed.description || fallback.description).trim(),
+      price: Number.isFinite(Number(parsed.price)) && Number(parsed.price) > 0 ? Number(parsed.price) : fallback.price,
+      compare_price: Number.isFinite(Number(parsed.compare_price)) && Number(parsed.compare_price) > fallback.price ? Number(parsed.compare_price) : fallback.compare_price,
+      brand: String(parsed.brand || fallback.brand).trim(),
+      thumbnail: String(parsed.thumbnail || fallback.thumbnail).trim(),
+      images: Array.isArray(parsed.images) && parsed.images.length ? parsed.images.map((x) => String(x).trim()).filter(Boolean) : fallback.images,
+      affiliate_link: String(parsed.affiliate_link || fallback.affiliate_link).trim() || fallback.affiliate_link,
+      affiliate_platform: String(parsed.affiliate_platform || fallback.affiliate_platform).trim() || fallback.affiliate_platform,
+      device_compatibility: Array.isArray(parsed.device_compatibility) && parsed.device_compatibility.length
+        ? parsed.device_compatibility.map((x) => String(x).trim()).filter(Boolean)
+        : fallback.device_compatibility,
+      stock_status: ['In Stock', 'Limited', 'Out of Stock'].includes(String(parsed.stock_status || '').trim()) ? String(parsed.stock_status).trim() : fallback.stock_status,
       tags: Array.isArray(parsed.tags)
         ? parsed.tags.map(x => String(x).trim()).filter(Boolean).slice(0, 10)
         : fallback.tags,
@@ -216,7 +374,10 @@ async function generateAdminProductDraft(input = {}) {
         meta_description: String(parsed?.seo?.meta_description || fallback.seo.meta_description).trim().slice(0, 160),
         meta_keywords: Array.isArray(parsed?.seo?.meta_keywords)
           ? parsed.seo.meta_keywords.map(x => String(x).trim()).filter(Boolean).slice(0, 12)
-          : fallback.seo.meta_keywords
+          : fallback.seo.meta_keywords,
+        canonical_url: String(parsed?.seo?.canonical_url || fallback.seo.canonical_url).trim(),
+        og_image: String(parsed?.seo?.og_image || fallback.seo.og_image).trim(),
+        schema_type: 'Product'
       }
     };
   } catch {
@@ -823,27 +984,25 @@ router.post('/products/generate-content', async (req, res) => {
 router.post('/products/generate-and-save', async (req, res) => {
   try {
     const { title = '', description = '' } = req.body || {};
+    const form = req.body?.form || {};
     if (!String(title).trim() && !String(description).trim()) {
       return res.status(400).json({ success: false, message: 'Provide title or description to generate AI content.' });
     }
 
     const source = String(req.body.source || '').trim();
     const modeOverride = source === 'title' ? 'title-only' : source === 'description' ? 'description-only' : undefined;
-    const draft = await generateAdminProductDraft({ title, description, modeOverride });
+    const draft = await generateAdminProductDraft({
+      title,
+      description,
+      modeOverride,
+      ...form,
+    });
 
-    const payload = {
-      ...draft,
-      price: draft.price || 0,
-      images: draft.images || (draft.thumbnail ? [draft.thumbnail] : []),
-      is_draft: true,
-      isAIGenerated: true,
-      aiGeneratedAt: new Date(),
-      status: 'draft',
-      ai_history: [{ versionAt: new Date(), note: 'initial ai draft', data: draft }]
-    };
-
-    // Ensure required affiliate_link exists to satisfy schema — use placeholder if missing
-    if (!payload.affiliate_link) payload.affiliate_link = 'https://example.com/affiliate-placeholder';
+    const payload = normalizeAiProductDraft({ ...form, title, description }, draft);
+    payload.isAIGenerated = true;
+    payload.aiGeneratedAt = new Date();
+    payload.status = 'draft';
+    payload.ai_history = [{ versionAt: new Date(), note: 'initial ai draft', data: draft }];
 
     const product = await Product.create(payload);
     res.status(201).json({ success: true, product });
