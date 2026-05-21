@@ -17,6 +17,10 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 let openaiClient = null;
 let geminiClient = null;
 
+function getGeminiApiKey() {
+  return process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+}
+
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) return null;
   if (!openaiClient) {
@@ -26,16 +30,19 @@ function getOpenAIClient() {
 }
 
 function getGeminiClient() {
-  if (!process.env.GEMINI_API_KEY) return null;
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) return null;
   if (!geminiClient) {
-    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    geminiClient = new GoogleGenerativeAI(apiKey);
   }
   return geminiClient;
 }
 
-function resolveAIProvider() {
+function resolveAIProvider(options = {}) {
   const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
-  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+  const hasGemini = Boolean(getGeminiApiKey());
+
+  if (options.preferGemini && hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
 
   if (AI_PROVIDER === 'gemini') {
     if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
@@ -268,6 +275,38 @@ function getPublishMissingFields(product = {}) {
   if (!String(product?.seo?.meta_title || '').trim()) missing.push('SEO meta title');
   if (!String(product?.seo?.meta_description || '').trim()) missing.push('SEO meta description');
 
+  return missing;
+}
+
+function normalizeAdminBlogPayload(body = {}) {
+  const payload = {
+    ...body,
+    title: String(body.title || '').trim(),
+    slug: String(body.slug || '').trim(),
+    content: String(body.content || '').trim(),
+    excerpt: String(body.excerpt || '').trim(),
+    coverImage: String(body.coverImage || '').trim(),
+    category: String(body.category || 'Guides').trim() || 'Guides',
+    author: String(body.author || 'GadgetGlam Team').trim() || 'GadgetGlam Team',
+    status: body.status === 'published' ? 'published' : 'draft',
+    featured: Boolean(body.featured),
+    metaTitle: String(body.metaTitle || '').trim(),
+    metaDescription: String(body.metaDescription || '').trim(),
+    tags: Array.isArray(body.tags)
+      ? body.tags.map((tag) => String(tag).trim()).filter(Boolean)
+      : String(body.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean),
+  };
+
+  if (payload.status === 'published') payload.publishedAt = body.publishedAt || new Date();
+  if (payload.status === 'draft') payload.publishedAt = undefined;
+
+  return payload;
+}
+
+function getBlogMissingFields(blog = {}) {
+  const missing = [];
+  if (!String(blog.title || '').trim()) missing.push('title');
+  if (!String(blog.content || '').trim()) missing.push('content');
   return missing;
 }
 
@@ -505,7 +544,7 @@ function buildInsightCards({ sales, products, returns, trends, stock }) {
 }
 
 async function generateAnalyticsAISummary(snapshot) {
-  const ai = resolveAIProvider();
+  const ai = resolveAIProvider({ preferGemini: true });
   if (!ai) return null;
 
   const prompt = {
@@ -524,7 +563,7 @@ async function generateAnalyticsAISummary(snapshot) {
     if (ai.provider === 'gemini') {
       const client = getGeminiClient();
       if (!client) return null;
-      const model = client.getGenerativeModel({ model: GEMINI_MODEL });
+      const model = client.getGenerativeModel({ model: ai.model });
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(prompt) }] }],
         generationConfig: { temperature: 0.25, maxOutputTokens: 700 }
@@ -872,7 +911,7 @@ router.post('/analytics/ai-summary', async (req, res) => {
   try {
     const analytics = req.body?.analytics || await buildAdminAnalytics(req.query);
     const fallback = {
-      summary: 'AI provider is not configured, so this summary is based on deterministic analytics. Review stock risk, low-performing products, return signals, and category demand before planning the next campaign.',
+      summary: 'AI summary could not be generated, so this summary is based on deterministic analytics. Review stock risk, low-performing products, return signals, and category demand before planning the next campaign.',
       insights: analytics.aiInsightCards || [],
       stockSuggestions: (analytics.aiStockSuggestions || []).map(item => `${item.action}: ${item.product} (${item.reason})`).slice(0, 5),
       returnSuggestions: analytics.returns?.suggestions || []
@@ -886,7 +925,8 @@ router.post('/analytics/ai-summary', async (req, res) => {
       productPerformance: analytics.productPerformance,
       aiStockSuggestions: analytics.aiStockSuggestions
     });
-    res.json({ success: true, aiSummary: aiSummary || fallback, provider: resolveAIProvider()?.provider || 'rules' });
+    const provider = aiSummary ? (resolveAIProvider({ preferGemini: true })?.provider || 'rules') : 'rules';
+    res.json({ success: true, aiSummary: aiSummary || fallback, provider });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -1154,7 +1194,11 @@ router.get('/blogs/:id', async (req, res) => {
 
 router.post('/blogs', async (req, res) => {
   try {
-    const blog = await Blog.create(req.body);
+    const payload = normalizeAdminBlogPayload(req.body);
+    const missing = getBlogMissingFields(payload);
+    if (missing.length) return res.status(400).json({ success: false, message: `Missing: ${missing.join(', ')}` });
+
+    const blog = await Blog.create(payload);
     res.status(201).json({ success: true, blog });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
@@ -1164,9 +1208,13 @@ router.put('/blogs/:id', async (req, res) => {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
 
-    Object.assign(blog, req.body);
-    if (req.body.status === 'published' && !blog.publishedAt) blog.publishedAt = new Date();
-    if (req.body.status === 'draft') blog.publishedAt = undefined;
+    const payload = normalizeAdminBlogPayload({ ...blog.toObject(), ...req.body });
+    const missing = getBlogMissingFields(payload);
+    if (missing.length) return res.status(400).json({ success: false, message: `Missing: ${missing.join(', ')}` });
+
+    Object.assign(blog, payload);
+    if (payload.status === 'published' && !blog.publishedAt) blog.publishedAt = new Date();
+    if (payload.status === 'draft') blog.set('publishedAt', undefined);
     await blog.save();
 
     res.json({ success: true, blog });
