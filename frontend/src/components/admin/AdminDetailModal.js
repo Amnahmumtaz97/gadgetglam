@@ -51,7 +51,7 @@ export function AdminProductDetail({ product }) {
       <Row label="Category">{product.category}</Row>
       <Row label="Brand">{product.brand || '—'}</Row>
       <Row label="Price">PKR {Number(product.price || 0).toLocaleString()}</Row>
-      <Row label="Stock">{product.stock_status}</Row>
+      <Row label="Stock">{product.stock_status}{product.stock !== undefined ? ` — ${product.stock}` : ''}</Row>
       <Row label="Status">{product.is_draft ? 'Draft' : 'Published'}{!product.is_active ? ' (inactive)' : ''}</Row>
       <Row label="Featured">{product.is_featured ? 'Yes' : 'No'}</Row>
       {product.short_description && (

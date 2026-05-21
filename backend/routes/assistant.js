@@ -34,22 +34,8 @@ function getGeminiClient() {
 }
 
 function resolveAIProvider() {
-  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
   const hasGemini = Boolean(process.env.GEMINI_API_KEY);
 
-  if (AI_PROVIDER === 'gemini') {
-    if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
-    if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
-    return null;
-  }
-
-  if (AI_PROVIDER === 'openai') {
-    if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
-    if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
-    return null;
-  }
-
-  if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
   if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
   return null;
 }

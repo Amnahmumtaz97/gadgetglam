@@ -64,9 +64,10 @@ export default function ProfilePage({ embedded = false }) {
   if (!user) return null;
 
   const content = (
-        <div className={embedded ? 'grid gap-6 lg:grid-cols-[1fr_1.2fr]' : 'market-grid-2'}>
-          {/* Left: Profile Card */}
-          <div className="market-card">
+        <div className={embedded ? 'grid gap-6' : 'market-grid-2'}>
+          {/* Left: Profile Card (hidden when embedded inside AccountHub) */}
+          {!embedded && (
+            <div className="market-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
               <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'var(--accent-yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#fff', fontWeight: '700', flexShrink: 0 }}>
                 {user.first_name?.[0]?.toUpperCase() || '👤'}
@@ -85,15 +86,6 @@ export default function ProfilePage({ embedded = false }) {
             </div>
 
             <div style={{ borderTop: '1.5px solid var(--gray-200)', paddingTop: '16px' }}>
-              {user.role === 'admin' && (
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="btn-primary"
-                  style={{ width: '100%', padding: '11px', marginBottom: '10px', fontSize: '14px' }}
-                >
-                  📊 Admin Dashboard
-                </button>
-              )}
               <Link
                 to="/account/orders"
                 className="mb-2.5 block w-full rounded-xl border-0 px-4 py-3 text-center text-sm font-semibold no-underline"
@@ -131,7 +123,8 @@ export default function ProfilePage({ embedded = false }) {
                 Sign Out
               </button>
             </div>
-          </div>
+            </div>
+          )}
 
           {/* Right: Orders & Account Info */}
           <div>

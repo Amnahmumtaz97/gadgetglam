@@ -95,7 +95,7 @@ export default function ProductsPage() {
     });
   };
 
-  const clearAll = () => setParams({});
+  const clearAll = () => setParams(() => new URLSearchParams());
   const activeFilters = [
     ...(category ? [{ label: category, key: 'category' }] : []),
     ...(featured ? [{ label: 'Hot Deals', key: 'featured' }] : []),

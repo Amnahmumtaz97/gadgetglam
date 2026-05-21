@@ -62,6 +62,7 @@ export default function AdminBlogsPanel() {
   const [form, setForm] = useState(BLANK_BLOG);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ limit: '100' });
@@ -84,6 +85,44 @@ export default function AdminBlogsPanel() {
     setEditBlog(null);
     setForm(BLANK_BLOG);
     setShowForm(true);
+  };
+
+  const generateAIDraft = async () => {
+    setGeneratingAI(true);
+    try {
+      const { data } = await axios.post('/api/admin/blogs/generate', { title: form.title, excerpt: form.excerpt, category: form.category });
+      if (data?.draft) {
+        setForm(toForm(data.draft));
+        setShowForm(true);
+        toast.success('AI draft generated');
+      } else {
+        toast.error('AI generation failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'AI generation failed');
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  const generateAndSaveAIBlog = async () => {
+    setGeneratingAI(true);
+    try {
+      const payload = { title: form.title, excerpt: form.excerpt, form };
+      const { data } = await axios.post('/api/admin/blogs/generate-and-save', payload);
+      if (data?.blog) {
+        setBlogs((items) => [data.blog, ...items]);
+        setShowForm(false);
+        setForm(BLANK_BLOG);
+        toast.success('AI blog generated and saved');
+      } else {
+        toast.error('AI save failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'AI save failed');
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const openEdit = (blog) => {
@@ -159,14 +198,22 @@ export default function AdminBlogsPanel() {
   return (
     <div className="space-y-6">
       <div className="rounded-4xl border border-theme bg-theme-panel p-5 shadow-card md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-black text-theme">Blog Management</h2>
             <p className="mt-1 text-sm text-theme-muted">Create SEO posts, buying guides, trends, and accessory advice.</p>
           </div>
-          <button type="button" onClick={openAdd} className="btn-primary rounded-xl px-4 py-2.5 text-sm">
-            <Plus size={16} /> Add Blog
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={openAdd} className="btn-primary rounded-xl px-4 py-2.5 text-sm">
+              <Plus size={16} /> Add Blog
+            </button>
+            <button type="button" onClick={generateAIDraft} disabled={generatingAI} className="btn-outline rounded-xl px-4 py-2.5 text-sm">
+              {generatingAI ? 'Generating…' : 'AI Draft'}
+            </button>
+            <button type="button" onClick={generateAndSaveAIBlog} disabled={generatingAI} className="btn-ghost rounded-xl px-4 py-2.5 text-sm">
+              {generatingAI ? 'Saving…' : 'AI Draft & Save'}
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-[1fr_180px]">

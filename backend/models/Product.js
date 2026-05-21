@@ -55,6 +55,7 @@ const ProductSchema = new mongoose.Schema({
   reviews_count: { type: Number, default: 0 },
   views:         { type: Number, default: 0 },
 
+  stock: { type: Number, default: 0, min: 0 },
   stock_status: { type: String, enum: ['In Stock', 'Out of Stock', 'Limited'], default: 'In Stock' },
   is_featured:  { type: Boolean, default: false, index: true },
   is_active:    { type: Boolean, default: true, index: true },

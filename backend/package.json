@@ -9,6 +9,8 @@
     "seed": "node config/seed.js",
     "seed:blogs": "node config/seedBlogs.js",
     "generate:sitemap": "node config/generateSitemap.js",
+    "analytics:report": "node scripts/generateAnalyticsReport.js",
+    "backfill:stock": "node scripts/backfillStockNumbers.js",
     "seed:analytics": "node config/seedAnalytics.js",
     "seed:analytics:rich": "node config/seedAnalytics.js",
     "refresh-images": "node config/refreshProductImages.js",

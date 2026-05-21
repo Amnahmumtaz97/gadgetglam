@@ -19,6 +19,7 @@ const HOME_PERKS = [
   { title: 'Fast Delivery', text: 'Nationwide shipping with protected packaging.', icon: Truck, stat: '2–4 days' },
   { title: 'Premium Quality', text: 'Top-rated accessories and trusted picks.', icon: PackageCheck, stat: '4.8★ avg' },
   { title: 'Secure Checkout', text: 'Smooth payments and safe order handling.', icon: ShieldCheck, stat: 'SSL safe' },
+  { title: 'Easy Returns', text: 'Simple exchange support if something does not fit right.', icon: Gift, stat: '7-day window' },
 ];
 
 const CATEGORY_ITEM_COUNTS = {

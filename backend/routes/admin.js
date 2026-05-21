@@ -39,24 +39,8 @@ function getGeminiClient() {
 }
 
 function resolveAIProvider(options = {}) {
-  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
   const hasGemini = Boolean(getGeminiApiKey());
 
-  if (options.preferGemini && hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
-
-  if (AI_PROVIDER === 'gemini') {
-    if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
-    if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
-    return null;
-  }
-
-  if (AI_PROVIDER === 'openai') {
-    if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
-    if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
-    return null;
-  }
-
-  if (hasOpenAI) return { provider: 'openai', model: OPENAI_MODEL };
   if (hasGemini) return { provider: 'gemini', model: GEMINI_MODEL };
   return null;
 }
@@ -425,6 +409,90 @@ async function generateAdminProductDraft(input = {}) {
   }
 }
 
+async function generateAdminBlogDraft(input = {}) {
+  const fallback = {
+    title: String(input.title || '').trim() || 'New Blog Post',
+    slug: String((input.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')).replace(/(^-|-$)/g, '').slice(0, 120),
+    excerpt: String(input.excerpt || '').trim().slice(0, 220) || 'Informative blog post about electronics and accessories.',
+    content: String(input.excerpt || '').trim() || 'Write a helpful blog post with headings, bullets, and actionable advice for shoppers.',
+    coverImage: '',
+    category: String(input.category || 'Guides') || 'Guides',
+    tags: [],
+    author: 'GadgetGlam Team',
+    metaTitle: '',
+    metaDescription: ''
+  };
+
+  // Prefer Gemini when available for richer long-form generation
+  const ai = resolveAIProvider({ preferGemini: true });
+  if (!ai) return fallback;
+
+  const prompt = {
+    task: 'Generate a well-structured SEO-friendly blog post draft for an ecommerce accessories store. Return JSON only with the keys specified.',
+    constraints: {
+      returnJsonOnly: true,
+      requiredKeys: ['title', 'slug', 'excerpt', 'content', 'coverImage', 'category', 'tags', 'author', 'metaTitle', 'metaDescription'],
+      contentStructure: 'Introduction (1 short paragraph), 3-5 H2 sections with 1-3 short paragraphs each and optional bullets, conclusion with call-to-action',
+      tone: 'Helpful, authoritative, and concise',
+      language: 'English',
+      excerptMax: 220,
+      contentMinWords: 300,
+      contentMaxWords: 1200,
+      maxTags: 12
+    },
+    input: {
+      title: input.title || '',
+      excerpt: input.excerpt || '',
+      category: input.category || 'Guides'
+    }
+  };
+
+  try {
+    let raw = null;
+    if (ai.provider === 'gemini') {
+      const client = getGeminiClient();
+      if (!client) return fallback;
+      const model = client.getGenerativeModel({ model: ai.model || GEMINI_MODEL });
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: JSON.stringify(prompt) }] }],
+        generationConfig: { temperature: 0.25, maxOutputTokens: 1400 }
+      });
+      raw = result?.response?.text?.();
+    } else {
+      const client = getOpenAIClient();
+      if (!client) return fallback;
+      const completion = await client.chat.completions.create({
+        model: ai.model || OPENAI_MODEL,
+        temperature: 0.25,
+        max_tokens: 1200,
+        messages: [
+          { role: 'system', content: 'Return only valid JSON. No markdown.' },
+          { role: 'user', content: JSON.stringify(prompt) }
+        ]
+      });
+      raw = completion?.choices?.[0]?.message?.content;
+    }
+
+    const parsed = safeJsonParse(raw);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+
+    return {
+      title: String(parsed.title || fallback.title).trim().slice(0, 220),
+      slug: String(parsed.slug || fallback.slug).trim().slice(0, 120),
+      excerpt: String(parsed.excerpt || fallback.excerpt).trim().slice(0, 500),
+      content: String(parsed.content || fallback.content).trim(),
+      coverImage: String(parsed.coverImage || fallback.coverImage).trim(),
+      category: String(parsed.category || fallback.category).trim() || fallback.category,
+      tags: Array.isArray(parsed.tags) ? parsed.tags.map((t) => String(t).trim()).filter(Boolean) : fallback.tags,
+      author: String(parsed.author || fallback.author).trim(),
+      metaTitle: String(parsed.metaTitle || fallback.metaTitle).trim().slice(0, 70),
+      metaDescription: String(parsed.metaDescription || fallback.metaDescription).trim().slice(0, 160)
+    };
+  } catch (err) {
+    return fallback;
+  }
+}
+
 function startOfDay(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -728,10 +796,11 @@ async function buildAdminAnalytics(query = {}) {
     .sort((a, b) => b.conversionRate - a.conversionRate)
     .slice(0, 8);
 
-  const outOfStock = products.filter(p => p.stock_status === 'Out of Stock');
-  const lowStock = products.filter(p => p.stock_status === 'Limited');
-  const overstocked = products.filter(p => p.stock_status === 'In Stock' && !convertedProductIds.has(String(p._id)) && Number(p.views || 0) < 20).slice(0, 8);
-  const deadInventory = products.filter(p => !convertedProductIds.has(String(p._id)) && Number(p.views || 0) === 0).slice(0, 8);
+  // Use numeric `stock` where available: <=0 => out of stock, 1-6 => limited, >6 => in stock
+  const outOfStock = products.filter(p => Number(p.stock || 0) <= 0);
+  const lowStock = products.filter(p => { const s = Number(p.stock || 0); return s > 0 && s <= 6; });
+  const overstocked = products.filter(p => Number(p.stock || 0) > 6 && !convertedProductIds.has(String(p._id)) && Number(p.views || 0) < 20).slice(0, 8);
+  const deadInventory = products.filter(p => Number(p.stock || 0) > 0 && !convertedProductIds.has(String(p._id)) && Number(p.views || 0) === 0).slice(0, 8);
 
   const returnedOrders = orders.filter(order => order.payment_status === 'Refunded' || order.order_status === 'Cancelled');
   const refundedValue = returnedOrders.reduce((sum, order) => sum + money(order.total_price), 0);
@@ -804,12 +873,16 @@ async function buildAdminAnalytics(query = {}) {
   };
 
   const stock = {
-    outOfStock: outOfStock.map(p => ({ _id: p._id, name: p.name, category: p.category })),
-    lowStock: lowStock.map(p => ({ _id: p._id, name: p.name, category: p.category })),
-    aboutToRunOut: lowStock.slice(0, 6).map(p => ({ _id: p._id, name: p.name, category: p.category, etaDays: Math.max(2, 8 - (productSales.get(String(p._id))?.quantity || 1)) })),
-    overstocked: overstocked.map(p => ({ _id: p._id, name: p.name, category: p.category })),
-    deadInventory: deadInventory.map(p => ({ _id: p._id, name: p.name, category: p.category })),
-    stockStatus: ['In Stock', 'Limited', 'Out of Stock'].map(status => ({ name: status, value: products.filter(p => p.stock_status === status).length }))
+    outOfStock: outOfStock.map(p => ({ _id: p._id, name: p.name, category: p.category, stock: Number(p.stock || 0) })),
+    lowStock: lowStock.map(p => ({ _id: p._id, name: p.name, category: p.category, stock: Number(p.stock || 0) })),
+    aboutToRunOut: lowStock.slice(0, 6).map(p => ({ _id: p._id, name: p.name, category: p.category, stock: Number(p.stock || 0), etaDays: Math.max(2, 8 - (productSales.get(String(p._id))?.quantity || 1)) })),
+    overstocked: overstocked.map(p => ({ _id: p._id, name: p.name, category: p.category, stock: Number(p.stock || 0) })),
+    deadInventory: deadInventory.map(p => ({ _id: p._id, name: p.name, category: p.category, stock: Number(p.stock || 0) })),
+    stockStatus: [
+      { name: 'In Stock', value: products.filter(p => Number(p.stock || 0) > 6).length },
+      { name: 'Limited', value: products.filter(p => { const s = Number(p.stock || 0); return s > 0 && s <= 6; }).length },
+      { name: 'Out of Stock', value: products.filter(p => Number(p.stock || 0) <= 0).length }
+    ]
   };
 
   const returns = {
@@ -911,7 +984,7 @@ router.post('/analytics/ai-summary', async (req, res) => {
   try {
     const analytics = req.body?.analytics || await buildAdminAnalytics(req.query);
     const fallback = {
-      summary: 'AI summary could not be generated, so this summary is based on deterministic analytics. Review stock risk, low-performing products, return signals, and category demand before planning the next campaign.',
+      summary: 'AI summary unavailable; showing deterministic analytics for stock risk, low-performing products, return signals, and category demand.',
       insights: analytics.aiInsightCards || [],
       stockSuggestions: (analytics.aiStockSuggestions || []).map(item => `${item.action}: ${item.product} (${item.reason})`).slice(0, 5),
       returnSuggestions: analytics.returns?.suggestions || []
@@ -1160,7 +1233,6 @@ router.delete('/products/:id', async (req, res) => {
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 
-// BLOGS
 router.get('/blogs', async (req, res) => {
   try {
     const { page = 1, limit = 50, search, status, category } = req.query;
@@ -1183,6 +1255,48 @@ router.get('/blogs', async (req, res) => {
     res.json({ success: true, blogs, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
+// BLOGS
+const SAMPLE_BLOGS = require('../config/sampleBlogs');
+function withSampleMeta(blog, index) {
+  const createdAt = blog.publishedAt || new Date();
+  return {
+    ...blog,
+    _id: `sample-blog-${index + 1}`,
+    createdAt,
+    updatedAt: createdAt,
+    views: blog.views || (SAMPLE_BLOGS.length - index) * 18,
+  };
+}
+
+router.get('/blogs', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, status, category } = req.query;
+    const query = {};
+    if (status) query.status = status;
+    if (category) query.category = new RegExp(`^${String(category).trim()}$`, 'i');
+    if (search) query.$or = [
+      { title: new RegExp(search, 'i') },
+      { excerpt: new RegExp(search, 'i') },
+      { category: new RegExp(search, 'i') },
+      { tags: new RegExp(search, 'i') },
+    ];
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [blogs, total] = await Promise.all([
+      Blog.find(query).sort('-updatedAt').skip(skip).limit(Number(limit)).lean(),
+      Blog.countDocuments(query),
+    ]);
+
+    if (total === 0) {
+      // return sample blogs as fallback so admin UI shows content when DB is empty
+      const allSamples = SAMPLE_BLOGS.map(withSampleMeta);
+      const pageItems = allSamples.slice(skip, skip + Number(limit));
+      return res.json({ success: true, blogs: pageItems, sample: true, pagination: { page: Number(page), limit: Number(limit), total: allSamples.length, pages: Math.ceil(allSamples.length / Number(limit)) } });
+    }
+
+    res.json({ success: true, blogs, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
 
 router.get('/blogs/:id', async (req, res) => {
   try {
@@ -1201,6 +1315,28 @@ router.post('/blogs', async (req, res) => {
     const blog = await Blog.create(payload);
     res.status(201).json({ success: true, blog });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+});
+
+// POST /api/admin/blogs/generate — return AI-generated blog draft (admin only)
+router.post('/blogs/generate', protect, adminOnly, async (req, res) => {
+  try {
+    const { title = '', excerpt = '', category = '' } = req.body || {};
+    const draft = await generateAdminBlogDraft({ title, excerpt, category });
+    res.json({ success: true, draft });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// POST /api/admin/blogs/generate-and-save — generate via AI and save to DB
+router.post('/blogs/generate-and-save', protect, adminOnly, async (req, res) => {
+  try {
+    const { title = '', excerpt = '', form = {} } = req.body || {};
+    const draft = await generateAdminBlogDraft({ title, excerpt, category: form.category });
+    const payload = normalizeAdminBlogPayload({ ...form, ...draft });
+    const missing = getBlogMissingFields(payload);
+    if (missing.length) return res.status(400).json({ success: false, message: `Missing: ${missing.join(', ')}` });
+    const blog = await Blog.create(payload);
+    res.status(201).json({ success: true, blog });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 router.put('/blogs/:id', async (req, res) => {
