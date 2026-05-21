@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /checkout
+Disallow: /account
+Disallow: /profile
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /payment-result
+
+Sitemap: https://www.gadgetglam.live/sitemap.xml
