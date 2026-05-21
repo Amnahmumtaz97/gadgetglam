@@ -103,8 +103,8 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="hidden items-center gap-2 md:flex">
-                  <Link to="/login" className="nav-icon-btn rounded-full px-4 py-3 text-sm font-bold">Sign in</Link>
-                  <Link to="/register" className="btn-gradient rounded-2xl px-4 py-3 text-sm font-semibold transition hover:brightness-105">Register</Link>
+                  <Link to="/login" className="nav-icon-btn inline-flex h-11 min-w-[86px] items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-bold">Sign in</Link>
+                  <Link to="/register" className="btn-gradient inline-flex h-11 min-w-[96px] items-center justify-center whitespace-nowrap rounded-2xl px-4 text-sm font-semibold transition hover:brightness-105">Register</Link>
                 </div>
               )}
 
