@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "seed": "node config/seed.js",
     "seed:blogs": "node config/seedBlogs.js",
+    "generate:sitemap": "node config/generateSitemap.js",
     "seed:analytics": "node config/seedAnalytics.js",
     "seed:analytics:rich": "node config/seedAnalytics.js",
     "refresh-images": "node config/refreshProductImages.js",
@@ -30,6 +31,7 @@
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "openai": "^6.34.0",
+    "sitemap": "^9.0.1",
     "slugify": "^1.6.6",
     "stripe": "^20.4.1",
     "validator": "^13.11.0"
