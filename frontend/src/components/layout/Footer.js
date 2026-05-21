@@ -28,6 +28,7 @@ const columns = [
     title: 'Help',
     links: [
       ['/help', 'Help Center'],
+      ['/blog', 'Blog'],
       ['/about', 'About Us'],
       ['/contact', 'Contact'],
       ['/faq', 'FAQ'],

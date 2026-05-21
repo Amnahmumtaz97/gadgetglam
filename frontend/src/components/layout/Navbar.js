@@ -59,14 +59,20 @@ export default function Navbar() {
         </div>
 
         <div className="nav-shell backdrop-blur-2xl">
-          <div className="container flex items-center gap-3 py-3.5">
-            <Link to="/" className="flex items-center gap-2 text-2xl font-black tracking-tight text-theme">
-              Gadget<span className="text-gradient">Glam</span>
-            </Link>
+          <div className="container grid items-center gap-3 py-3.5 md:grid-cols-[minmax(190px,1fr)_minmax(320px,520px)_minmax(190px,1fr)]">
+            <div className="flex items-center gap-5">
+              <Link to="/" className="flex items-center gap-2 text-2xl font-black tracking-tight text-theme">
+                Gadget<span className="text-gradient">Glam</span>
+              </Link>
+
+              <Link to="/blog" className="hidden rounded-full px-4 py-2 text-sm font-bold text-theme-muted transition hover:bg-accent-light hover:text-theme lg:inline-flex">
+                Blog
+              </Link>
+            </div>
 
             <button
               onClick={searchAction}
-              className="nav-search hidden flex-1 items-center gap-3 rounded-full px-4 py-3 text-left text-sm transition md:flex"
+              className="nav-search mx-auto hidden w-full items-center gap-3 rounded-full px-4 py-3 text-left text-sm transition md:flex"
             >
               <Search size={16} />
               <span>Search smart watches, earbuds, chargers...</span>

@@ -22,6 +22,8 @@ import FAQPage from './pages/FAQPage';
 import HelpCenterPage from './pages/HelpCenterPage';
 import HelpCategoryPage from './pages/HelpCategoryPage';
 import WishlistPage from './pages/WishlistPage';
+import BlogPage from './pages/BlogPage';
+import BlogDetailPage from './pages/BlogDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
@@ -55,6 +57,8 @@ export default function App() {
           <Route path="/faq"                    element={<FAQPage />} />
           <Route path="/help"                   element={<HelpCenterPage />} />
           <Route path="/help/:category"         element={<HelpCategoryPage />} />
+          <Route path="/blog"                   element={<BlogPage />} />
+          <Route path="/blog/:slug"             element={<BlogDetailPage />} />
           <Route path="/returns"                element={<HelpCategoryPage forcedCategory="returns-and-refunds" />} />
           <Route path="/privacy"                element={<HelpCategoryPage forcedCategory="privacy" />} />
           <Route path="/terms"                  element={<HelpCategoryPage forcedCategory="terms" />} />

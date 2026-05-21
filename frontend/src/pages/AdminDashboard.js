@@ -17,7 +17,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { BarChart3, BrainCircuit, ChevronRight, Download, FileDown, LayoutDashboard, Package, RefreshCw, ShoppingCart, Sparkles, Star, TrendingUp, Users } from 'lucide-react';
+import { BarChart3, BookOpen, BrainCircuit, ChevronRight, Download, FileDown, LayoutDashboard, Package, RefreshCw, ShoppingCart, Sparkles, Star, TrendingUp, Users } from 'lucide-react';
 import AdminDetailModal, {
   AdminModalFooterLink,
   AdminOrderDetail,
@@ -26,6 +26,7 @@ import AdminDetailModal, {
   AdminUserDetail,
 } from '../components/admin/AdminDetailModal';
 import SelectMenu from '../components/ui/SelectMenu';
+import AdminBlogsPanel from '../components/admin/AdminBlogsPanel';
 
 import { PRODUCT_CATEGORIES } from '../lib/categories';
 
@@ -39,6 +40,7 @@ const ADMIN_SECTIONS = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'analytics', label: 'Analytics', icon: BarChart3 },
   { key: 'products', label: 'Products', icon: Package },
+  { key: 'blogs', label: 'Blogs', icon: BookOpen },
   { key: 'orders', label: 'Orders', icon: ShoppingCart },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'reviews', label: 'Reviews', icon: Star },
@@ -698,6 +700,7 @@ export default function AdminDashboard() {
                     onRegenerate={regenerateProduct}
                   />
                 )}
+                {tab === 'blogs' && <AdminBlogsPanel />}
                 {tab === 'orders' && (
                   <OrdersTab
                     orders={orders}

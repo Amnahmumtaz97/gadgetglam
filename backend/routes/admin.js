@@ -3,6 +3,7 @@ const router = express.Router();
 const OpenAI = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Product = require('../models/Product');
+const Blog = require('../models/Blog');
 const User = require('../models/User');
 const UserBehavior = require('../models/UserBehavior');
 const { Order, Review } = require('../models/OrderReview');
@@ -1116,6 +1117,67 @@ router.delete('/products/:id', async (req, res) => {
   try {
     await Product.findByIdAndUpdate(req.params.id, { is_active: false });
     res.json({ success: true, message: 'Product deactivated' });
+  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+});
+
+// BLOGS
+router.get('/blogs', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, status, category } = req.query;
+    const query = {};
+    if (status) query.status = status;
+    if (category) query.category = new RegExp(`^${String(category).trim()}$`, 'i');
+    if (search) query.$or = [
+      { title: new RegExp(search, 'i') },
+      { excerpt: new RegExp(search, 'i') },
+      { category: new RegExp(search, 'i') },
+      { tags: new RegExp(search, 'i') },
+    ];
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [blogs, total] = await Promise.all([
+      Blog.find(query).sort('-updatedAt').skip(skip).limit(Number(limit)),
+      Blog.countDocuments(query),
+    ]);
+
+    res.json({ success: true, blogs, pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) } });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.get('/blogs/:id', async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
+    res.json({ success: true, blog });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.post('/blogs', async (req, res) => {
+  try {
+    const blog = await Blog.create(req.body);
+    res.status(201).json({ success: true, blog });
+  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+});
+
+router.put('/blogs/:id', async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
+
+    Object.assign(blog, req.body);
+    if (req.body.status === 'published' && !blog.publishedAt) blog.publishedAt = new Date();
+    if (req.body.status === 'draft') blog.publishedAt = undefined;
+    await blog.save();
+
+    res.json({ success: true, blog });
+  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+});
+
+router.delete('/blogs/:id', async (req, res) => {
+  try {
+    const blog = await Blog.findByIdAndDelete(req.params.id);
+    if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
+    res.json({ success: true, message: 'Blog deleted' });
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 

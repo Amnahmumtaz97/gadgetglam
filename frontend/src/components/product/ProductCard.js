@@ -41,7 +41,7 @@ export default function ProductCard({ product, compact = false }) {
     >
       <Link
         to={`/products/${product.slug}`}
-        className="relative block overflow-hidden rounded-xl border border-theme"
+        className="relative block overflow-hidden rounded-xl border border-theme bg-theme-panel"
         onClick={() => {
           axios.post('/api/assistant/event', {
             sessionId: getAssistantSessionId(),
@@ -50,14 +50,14 @@ export default function ProductCard({ product, compact = false }) {
           }).catch(() => {});
         }}
       >
-        <div className={`relative overflow-hidden bg-[var(--gray-200)] ${compact ? 'aspect-square max-h-[160px]' : 'aspect-square'}`}>
+        <div className={`relative overflow-hidden bg-[var(--surface-2)] ${compact ? 'aspect-[4/3]' : 'aspect-square'}`}>
           {displayImage ? (
             <img
               src={displayImage}
               alt={product.name}
               itemProp="image"
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover object-center transition duration-500 group-hover:scale-105"
+              className="absolute inset-0 h-full w-full max-w-none object-cover object-center transition duration-500 group-hover:scale-[1.02]"
               onError={(event) => {
                 const fallback = getRealProductFallback(product);
                 if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback;
@@ -66,7 +66,6 @@ export default function ProductCard({ product, compact = false }) {
           ) : (
             <div className="grid h-full w-full place-items-center text-theme-muted"><Smartphone size={compact ? 36 : 54} strokeWidth={1.2} /></div>
           )}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-1/4 bg-gradient-to-t from-black/25 to-transparent" />
           <div className="absolute left-3 top-3 z-[2] flex gap-2">
             {discount ? <span className="rounded-full border border-[#E11D2E] bg-[#E11D2E] px-3 py-1 text-xs font-bold text-white shadow-[0_8px_18px_rgba(225,29,46,0.22)]">-{discount}%</span> : null}
             {isBundleDeal && !discount ? <span className="rounded-full border border-accent bg-accent px-3 py-1 text-xs font-bold text-on-accent">Bundle deal</span> : null}
