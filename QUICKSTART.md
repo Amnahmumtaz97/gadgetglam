@@ -2,8 +2,7 @@
 
 ## 🚀 Project Ready for Testing
 
-Your e-commerce platform is fully integrated and ready for comprehensive testing. All major features have been implemented and deployed.
-
+Your e-commerce platform is fully integrated and ready for comprehensive testing. All major features have been implemented and deployed..
 ---
 
 ## ⚡ Quick Setup
