@@ -409,6 +409,88 @@ async function generateAdminProductDraft(input = {}) {
   }
 }
 
+async function generateAdminMetaDraft(input = {}) {
+  const fallback = normalizeAiProductDraft(input, buildDraftFromInput(input));
+  const ai = resolveAIProvider();
+  if (!ai) return fallback;
+
+  const prompt = {
+    task: 'Generate ecommerce SEO meta and product description copy for an admin product form.',
+    constraints: {
+      returnJsonOnly: true,
+      requiredKeys: ['short_description', 'description', 'seo'],
+      seoKeys: ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'og_image'],
+      tone: 'professional, conversion-focused, concise',
+      language: 'English',
+      shortDescriptionMax: 220,
+      metaDescriptionMax: 160,
+      descriptionParagraphs: 2
+    },
+    productInput: {
+      title: input.title || '',
+      description: input.description || '',
+      brand: input.brand || '',
+      category: input.category || '',
+      tags: input.tags || '',
+      price: input.price ?? '',
+      compare_price: input.compare_price ?? '',
+      stock_status: input.stock_status || '',
+      affiliate_platform: input.affiliate_platform || '',
+    }
+  };
+
+  try {
+    let raw = null;
+
+    if (ai.provider === 'gemini') {
+      const client = getGeminiClient();
+      if (!client) return fallback;
+
+      const model = client.getGenerativeModel({ model: ai.model || GEMINI_MODEL });
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: JSON.stringify(prompt) }] }],
+        generationConfig: { temperature: 0.35, maxOutputTokens: 650 }
+      });
+      raw = result?.response?.text?.();
+    } else {
+      const client = getOpenAIClient();
+      if (!client) return fallback;
+
+      const completion = await client.chat.completions.create({
+        model: ai.model || OPENAI_MODEL,
+        temperature: 0.35,
+        max_tokens: 650,
+        messages: [
+          { role: 'system', content: 'Return only valid JSON. No markdown.' },
+          { role: 'user', content: JSON.stringify(prompt) }
+        ]
+      });
+      raw = completion?.choices?.[0]?.message?.content;
+    }
+
+    const parsed = safeJsonParse(raw);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+
+    return {
+      ...fallback,
+      short_description: String(parsed.short_description || fallback.short_description).trim().slice(0, 300),
+      description: String(parsed.description || fallback.description).trim(),
+      seo: {
+        meta_title: String(parsed?.seo?.meta_title || fallback.seo.meta_title).trim().slice(0, 70),
+        meta_description: String(parsed?.seo?.meta_description || fallback.seo.meta_description).trim().slice(0, 160),
+        meta_keywords: Array.isArray(parsed?.seo?.meta_keywords)
+          ? parsed.seo.meta_keywords.map((x) => String(x).trim()).filter(Boolean).slice(0, 12)
+          : fallback.seo.meta_keywords,
+        canonical_url: String(parsed?.seo?.canonical_url || fallback.seo.canonical_url).trim(),
+        og_image: String(parsed?.seo?.og_image || fallback.seo.og_image).trim(),
+        schema_type: 'Product'
+      }
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 async function generateAdminBlogDraft(input = {}) {
   const fallback = {
     title: String(input.title || '').trim() || 'New Blog Post',
@@ -1086,8 +1168,14 @@ router.post('/products/generate-content', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Provide title or description to generate AI content.' });
     }
     const source = String(req.body.source || '').trim();
-    const modeOverride = source === 'title' ? 'title-only' : source === 'description' ? 'description-only' : undefined;
-    const content = await generateAdminProductDraft({ title, description, modeOverride });
+    const content = source === 'seo'
+      ? await generateAdminMetaDraft({ title, description, ...(req.body.form || {}) })
+      : await generateAdminProductDraft({
+          title,
+          description,
+          modeOverride: source === 'title' ? 'title-only' : source === 'description' ? 'description-only' : undefined,
+          ...(req.body.form || {})
+        });
     res.json({ success: true, content, draftOnly: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Failed to generate content' });
@@ -1143,7 +1231,19 @@ router.post('/products/:id/regenerate', async (req, res) => {
       modeOverride: isSeoOnly ? 'seo-only' : mode
     };
 
-    const generated = await generateAdminProductDraft(input);
+    const generated = isSeoOnly
+      ? await generateAdminMetaDraft({
+          title: product.name || '',
+          description: product.description || '',
+          brand: product.brand || '',
+          category: product.category || '',
+          tags: Array.isArray(product.tags) ? product.tags.join(', ') : '',
+          price: product.price,
+          compare_price: product.compare_price,
+          stock_status: product.stock_status,
+          affiliate_platform: product.affiliate_platform,
+        })
+      : await generateAdminProductDraft(input);
 
     const update = {
       ...(generated.name ? { name: generated.name } : {}),

@@ -1401,6 +1401,7 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
                   { value: 'both', label: 'Name + description' },
                   { value: 'title', label: 'Name only' },
                   { value: 'description', label: 'Description only' },
+                  { value: 'seo', label: 'Meta + description' },
                 ]}
                 aria-label="AI generation source"
               />
@@ -1455,6 +1456,40 @@ function ProductsTab({ products, showProdForm, editProduct, prodForm, setProdFor
               }
             }} className="rounded-2xl px-4 py-2 text-sm font-semibold btn-primary">
               {generatingAI ? 'Generating AI content…' : 'Generate AI content'}
+            </button>
+            <button type="button" onClick={async () => {
+              if (!prodForm.name.trim() && !prodForm.description.trim()) {
+                toast.error('Enter a title or description first.');
+                return;
+              }
+              setGeneratingAI(true);
+              try {
+                const { data } = await axios.post('/api/admin/products/generate-content', {
+                  title: prodForm.name,
+                  description: prodForm.description,
+                  source: 'seo',
+                  form: prodForm,
+                });
+
+                const ai = data?.content || {};
+                setProdForm(prev => ({
+                  ...prev,
+                  short_description: ai.short_description || prev.short_description,
+                  description: ai.description || prev.description,
+                  seo_meta_title: ai?.seo?.meta_title || prev.seo_meta_title,
+                  seo_meta_description: ai?.seo?.meta_description || prev.seo_meta_description,
+                  seo_meta_keywords: Array.isArray(ai?.seo?.meta_keywords) && ai.seo.meta_keywords.length
+                    ? ai.seo.meta_keywords.join(', ')
+                    : prev.seo_meta_keywords,
+                }));
+                toast.success('Meta and description generated');
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'SEO generation failed');
+              } finally {
+                setGeneratingAI(false);
+              }
+            }} className="rounded-2xl px-4 py-2 text-sm font-semibold btn-outline">
+              {generatingAI ? 'Generating…' : 'AI Meta + Description'}
             </button>
             {editProduct?.isAIGenerated && (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
